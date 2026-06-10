@@ -1,0 +1,9 @@
+{
+  "name": "Preet Community Hub",
+  "description": "A high-performance interactive community platform featuring rich discussion feeds, member directories, upcoming meetups, dynamic RSVPs, and collaborative masterclasses.",
+  "requestFramePermissions": [
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
