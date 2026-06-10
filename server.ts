@@ -3,6 +3,8 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
+import cors from "cors";
+import helmet from "helmet";
 import * as dotenv from "dotenv";
 import { SentryOrchestrator } from "./server/services/sentry";
 
@@ -61,9 +63,22 @@ dotenv.config();
 SentryOrchestrator.init();
 
 const app = express();
-const PORT = 3000;
+const PORT = parseInt(process.env.PORT || "3000", 10);
 
 app.set("trust proxy", 1);
+
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
+
+// CORS configuration
+const allowedOrigins = (process.env.CORS_ORIGINS || "").split(",").filter(Boolean);
+app.use(cors({
+  origin: allowedOrigins.length > 0 ? allowedOrigins : false,
+  credentials: true,
+}));
 
 // Mount Sentry Request Handler
 app.use(SentryOrchestrator.getRequestHandler());
@@ -113,14 +128,23 @@ app.post(
 );
 
 // --- MONITORING & UPTIME DIAGNOSTICS ---
-app.get("/health", (req, res) => {
+app.get("/health", async (req, res) => {
+  let dbStatus = "disconnected";
+  try {
+    const { getSupabaseServerClient } = require("./server/middleware/requireAuth");
+    const supabase = getSupabaseServerClient();
+    const { error } = await supabase.from("workspaces").select("id", { count: "exact", head: true });
+    dbStatus = error ? "error" : "connected";
+  } catch {
+    dbStatus = "disconnected";
+  }
   res.json({
     status: "ok",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     services: {
       server: "healthy",
-      database: "connected"
+      database: dbStatus
     },
     version: "1.0.0"
   });

@@ -36,7 +36,14 @@
   // ============================================
   // STYLES
   // ============================================
+  function sanitizeColor(color: string): string {
+    if (!color || typeof color !== 'string') return '#7c3aed';
+    const match = color.match(/^#([0-9A-Fa-f]{3,8})$/);
+    return match ? color : '#7c3aed';
+  }
+
   function injectStyles(brandColor) {
+    const safeColor = sanitizeColor(brandColor);
     const style = document.createElement('style');
     style.textContent = `
       #preet-ai-widget * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -49,7 +56,7 @@
         width: 60px;
         height: 60px;
         border-radius: 50%;
-        background: ${brandColor};
+        background: ${safeColor};
         color: white;
         border: none;
         cursor: pointer;
@@ -84,7 +91,7 @@
       
       .pai-header {
         padding: 16px;
-        background: ${brandColor};
+        background: ${safeColor};
         color: white;
         display: flex;
         align-items: center;
@@ -118,7 +125,7 @@
       }
       .pai-message.visitor {
         align-self: flex-end;
-        background: ${brandColor}; color: white;
+        background: ${safeColor}; color: white;
         border-bottom-right-radius: 4px;
       }
       .pai-message.agent {
@@ -145,10 +152,10 @@
         border-radius: 10px; font-size: 13px; outline: none;
         transition: border-color 0.2s;
       }
-      .pai-input:focus { border-color: ${brandColor}; }
+      .pai-input:focus { border-color: ${safeColor}; }
       .pai-send {
         width: 40px; height: 40px; border-radius: 10px;
-        background: ${brandColor}; color: white; border: none;
+        background: ${safeColor}; color: white; border: none;
         cursor: pointer; display: flex; align-items: center; justify-content: center;
         transition: opacity 0.2s;
       }
@@ -445,6 +452,7 @@
   // FORM STYLES
   // ============================================
   function injectFormStyles(brandColor: string) {
+    const safeColor = sanitizeColor(brandColor);
     const style = document.createElement('style');
     style.className = 'preet-form-styles';
     style.textContent = `
@@ -459,12 +467,12 @@
         width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px;
         font-size: 13px; outline: none; transition: border-color 0.2s; background: white;
       }
-      .preet-form-input:focus, .preet-form-select:focus, .preet-form-textarea:focus { border-color: ${brandColor}; }
+      .preet-form-input:focus, .preet-form-select:focus, .preet-form-textarea:focus { border-color: ${safeColor}; }
       .preet-form-textarea { min-height: 80px; resize: vertical; }
       .preet-form-checkbox-wrap { display: flex; align-items: center; gap: 8px; }
-      .preet-form-checkbox { width: 16px; height: 16px; accent-color: ${brandColor}; }
+      .preet-form-checkbox { width: 16px; height: 16px; accent-color: ${safeColor}; }
       .preet-form-submit {
-        width: 100%; padding: 12px; border: none; border-radius: 8px; background: ${brandColor};
+        width: 100%; padding: 12px; border: none; border-radius: 8px; background: ${safeColor};
         color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
       }
       .preet-form-submit:hover { opacity: 0.9; }

@@ -31,10 +31,9 @@ interface AIAgent {
   createdAt: string;
 }
 
-const workspaceId = localStorage.getItem('activeWorkspaceId') || '1';
-const headers = { 'x-workspace-id': workspaceId };
-
 export default function Agents() {
+  const workspaceId = localStorage.getItem('activeWorkspaceId') || '1';
+  const headers = { 'x-workspace-id': workspaceId };
   const [agents, setAgents] = useState<AIAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);

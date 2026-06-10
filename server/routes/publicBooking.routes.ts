@@ -1,5 +1,5 @@
 import { Router, Response, NextFunction, Request } from "express";
-import { clientRateLimiter } from "../middleware/rateLimiters";
+import { publicRateLimiter } from "../middleware/rateLimiters";
 import { AppointmentService } from "../services/appointment.service";
 import { ClientService } from "../services/client.service";
 import { ClientActivityService } from "../services/clientActivity.service";
@@ -29,7 +29,7 @@ const getWorkspaceDetails = async (slug: string) => {
  * GET /api/public/booking/:slug
  * Retrieves workspace context, lists of available services, and mock schedules for the chosen slug.
  */
-publicBookingRouter.get("/:slug", clientRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+publicBookingRouter.get("/:slug", publicRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const slug = req.params.slug || "salon-a";
     const workspace = await getWorkspaceDetails(slug);
@@ -115,7 +115,7 @@ publicBookingRouter.get("/:slug", clientRateLimiter, async (req: Request, res: R
  * POST /api/public/booking/book
  * Submits self-booking information. Matches or creates a client, then registers the appointment.
  */
-publicBookingRouter.post("/book", clientRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+publicBookingRouter.post("/book", publicRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { 
       slug, 

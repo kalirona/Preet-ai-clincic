@@ -81,3 +81,18 @@ export const notificationRateLimiter = rateLimit({
     });
   }
 });
+
+// Strict protection for public unauthenticated endpoints
+export const publicRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => getUserOrIpKey(req),
+  handler: (req, res) => {
+    res.status(429).json({
+      error: "Too Many Requests",
+      message: "Rate limit exceeded. Please try again later."
+    });
+  }
+});

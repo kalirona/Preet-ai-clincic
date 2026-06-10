@@ -43,10 +43,9 @@ interface Form {
 
 const FIELD_TYPES = ['text', 'email', 'phone', 'number', 'textarea', 'select', 'checkbox', 'date'];
 
-const workspaceId = localStorage.getItem('activeWorkspaceId') || '1';
-const headers = { 'x-workspace-id': workspaceId };
-
 export default function Forms() {
+  const workspaceId = localStorage.getItem('activeWorkspaceId') || '1';
+  const headers = { 'x-workspace-id': workspaceId };
   const navigate = useNavigate();
   const [forms, setForms] = useState<Form[]>([]);
   const [loading, setLoading] = useState(true);

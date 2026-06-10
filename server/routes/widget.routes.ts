@@ -1,6 +1,7 @@
 import { Router, Response, NextFunction, Request } from "express";
 import { AgentService } from "../services/agent.service";
 import { InboxService } from "../services/inbox.service";
+import { publicRateLimiter } from "../middleware/rateLimiters";
 import { ApiError } from "../types/errors";
 import { getSupabaseServerClient } from "../middleware/requireAuth";
 
@@ -24,11 +25,6 @@ router.get(
         avatarUrl: agent.avatarUrl,
         humanHandoffEnabled: agent.humanHandoffEnabled,
         widgetConfig: agent.widgetConfig,
-        knowledgeFiles: knowledgeFiles.map(f => ({
-          id: f.id,
-          fileName: f.fileName,
-          contentText: f.contentText,
-        })),
       });
     } catch (err) {
       next(err);
@@ -39,6 +35,7 @@ router.get(
 // POST /widget/:agentId/start - Start a new conversation
 router.post(
   "/widget/:agentId/start",
+  publicRateLimiter,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await InboxService.widgetStartConversation(req.params.agentId, {
@@ -63,6 +60,7 @@ router.post(
 // POST /widget/conversation/:conversationId/message - Send a message from widget
 router.post(
   "/widget/conversation/:conversationId/message",
+  publicRateLimiter,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { content } = req.body;

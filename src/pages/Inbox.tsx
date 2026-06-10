@@ -37,12 +37,11 @@ interface Message {
   createdAt: string;
 }
 
-const workspaceId = localStorage.getItem('activeWorkspaceId') || '1';
-const headers = { 'x-workspace-id': workspaceId };
-
 type FilterTab = 'all' | 'unread' | 'open' | 'archived';
 
 export default function Inbox() {
+  const workspaceId = localStorage.getItem('activeWorkspaceId') || '1';
+  const headers = { 'x-workspace-id': workspaceId };
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');

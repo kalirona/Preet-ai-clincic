@@ -8,13 +8,13 @@ let supabaseServerClient: any = null;
 export const getSupabaseServerClient = () => {
   if (!supabaseServerClient) {
     const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
-    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
     
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error("SUPABASE_URL and SUPABASE_ANON_KEY environment variables must be defined on the server");
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables must be defined on the server");
     }
     
-    supabaseServerClient = createClient(supabaseUrl, supabaseAnonKey, {
+    supabaseServerClient = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
@@ -35,7 +35,7 @@ export const requireAuth = async (
     const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
 
     if (!isSupabaseConfigured) {
-      throw new ApiError(401, "Authentication service is not configured. Please set SUPABASE_URL and SUPABASE_ANON_KEY.");
+      throw new ApiError(401, "Authentication service is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.");
     }
 
     const authHeader = req.headers.authorization;

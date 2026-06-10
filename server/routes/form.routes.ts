@@ -2,6 +2,7 @@ import { Router, Response, NextFunction, Request } from "express";
 import { requireAuth } from "../middleware/requireAuth";
 import { requireRole } from "../middleware/requireRole";
 import { validateRequest } from "../middleware/validateRequest";
+import { publicRateLimiter } from "../middleware/rateLimiters";
 import { AuthenticatedRequest } from "../types/auth";
 import { ApiError } from "../types/errors";
 import { FormService } from "../services/form.service";
@@ -259,6 +260,7 @@ router.get(
 // POST /public/:formId/submit - Submit form response
 router.post(
   "/public/:formId/submit",
+  publicRateLimiter,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { answers, visitorName, visitorEmail, visitorPhone } = req.body;

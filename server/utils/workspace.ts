@@ -22,7 +22,7 @@ export function getWorkspaceId(req: AuthenticatedRequest): string {
 }
 
 /**
- * Extracts workspace ID from request, defaulting to "1" if not found.
+ * Extracts workspace ID from request, throws 400 if not found.
  */
 export function getWorkspaceIdLenient(req: AuthenticatedRequest): string {
   const wsId =
@@ -34,5 +34,8 @@ export function getWorkspaceIdLenient(req: AuthenticatedRequest): string {
     (req.params?.workspaceId as string) ||
     (req.params?.workspace_id as string);
 
-  return wsId || "1";
+  if (!wsId) {
+    throw new ApiError(400, "Workspace context boundary identifier has not been specified.");
+  }
+  return wsId;
 }

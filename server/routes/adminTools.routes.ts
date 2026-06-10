@@ -8,7 +8,7 @@ import { ClientService } from "../services/client.service";
 import { AppointmentService } from "../services/appointment.service";
 import { AuditLogService } from "../services/auditLog.service";
 
-import { getWorkspaceIdLenient } from "../utils/workspace";
+import { getWorkspaceId } from "../utils/workspace";
 
 const router = Router();
 
@@ -51,19 +51,6 @@ let snapshotVault: BackupSnapshot[] = [
   }
 ];
 
-const getWorkspaceId = (req: AuthenticatedRequest): string => {
-  const wsId =
-    (req.headers["x-workspace-id"] as string) ||
-    (req.body?.workspaceId as string) ||
-    (req.query?.workspaceId as string) ||
-    "1"; // fallback to root tenant workspace
-
-  if (!wsId) {
-    throw new ApiError(400, "Workspace context boundary identifier has not been specified.");
-  }
-  return wsId;
-};
-
 // ==========================================
 // PHASE 26: EXPORT CENTER ENDPOINTS
 // ==========================================
@@ -76,7 +63,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceIdLenient(req);
+      const workspaceId = getWorkspaceId(req);
       const type = (req.query.type as string || "clients").toLowerCase();
       const format = (req.query.format as string || "csv").toLowerCase();
 
@@ -311,9 +298,9 @@ router.get(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceIdLenient(req);
-      // Give simulated snapshots mapped or filtered by creator/tenant metadata
-      res.json(snapshotVault);
+      const workspaceId = getWorkspaceId(req);
+      const filtered = snapshotVault.filter((s: any) => s.workspaceId === workspaceId);
+      res.json(filtered.map(({ data, ...rest }: any) => rest));
     } catch (err) {
       next(err);
     }
@@ -328,7 +315,7 @@ router.post(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceIdLenient(req);
+      const workspaceId = getWorkspaceId(req);
       const userEmail = req.user?.email || "superadmin@preet.ai";
 
       // Gather active records matching the tenant boundary context limits
@@ -384,7 +371,7 @@ router.post(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceIdLenient(req);
+      const workspaceId = getWorkspaceId(req);
       const { snapshotId } = req.body;
 
       if (!snapshotId) {
@@ -427,7 +414,7 @@ router.post(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceIdLenient(req);
+      const workspaceId = getWorkspaceId(req);
       
       await AuditLogService.createLog({
         workspaceId,

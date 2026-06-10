@@ -41,12 +41,11 @@ interface FormResponse {
   createdAt: string;
 }
 
-const workspaceId = localStorage.getItem('activeWorkspaceId') || '1';
-const headers = { 'x-workspace-id': workspaceId };
-
 type FilterTab = 'all' | 'new' | 'read' | 'converted' | 'archived';
 
 export default function FormResponses() {
+  const workspaceId = localStorage.getItem('activeWorkspaceId') || '1';
+  const headers = { 'x-workspace-id': workspaceId };
   const { id } = useParams<{ id: string }>();
   const [form, setForm] = useState<FormBuilder | null>(null);
   const [responses, setResponses] = useState<FormResponse[]>([]);
