@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import axios from 'axios';
 import {
   Calendar,
   CheckCircle2,
@@ -16,7 +17,9 @@ import {
   Layers,
   ArrowUpRight,
   ChevronRight,
-  X
+  X,
+  MessageCircle,
+  ClipboardList
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -75,6 +78,31 @@ export function Dashboard() {
   const [generatedReminder, setGeneratedReminder] = useState('');
   const [isReminderGenerating, setIsReminderGenerating] = useState(false);
   const [selectedFollowUpClient, setSelectedFollowUpClient] = useState('Alex Rivera');
+
+  // Real API metrics
+  const workspaceId = localStorage.getItem('activeWorkspaceId') || '1';
+  const [apiMetrics, setApiMetrics] = useState({
+    totalClients: 0,
+    newClientsThisMonth: 0,
+    appointmentsToday: 0,
+    upcomingAppointments: 0,
+    estimatedRevenueMonth: 0,
+  });
+  const [inboxStats, setInboxStats] = useState({ total: 0, unread: 0, open: 0, archived: 0 });
+  const [formStats, setFormStats] = useState({ total: 0, new: 0, converted: 0 });
+
+  useEffect(() => {
+    const headers = { 'x-workspace-id': workspaceId };
+    Promise.allSettled([
+      axios.get('/api/dashboard', { headers }),
+      axios.get('/api/inbox/stats', { headers }),
+      axios.get('/api/forms/stats', { headers }),
+    ]).then(([dashRes, inboxRes, formRes]) => {
+      if (dashRes.status === 'fulfilled') setApiMetrics(dashRes.value.data);
+      if (inboxRes.status === 'fulfilled') setInboxStats(inboxRes.value.data);
+      if (formRes.status === 'fulfilled') setFormStats(formRes.value.data);
+    });
+  }, [workspaceId]);
 
   useEffect(() => {
     localStorage.setItem('preet_dashboard_appts', JSON.stringify(appointments));
@@ -249,19 +277,48 @@ export function Dashboard() {
 
           <Card className="border-slate-200 bg-white shadow-3xs hover:border-slate-300 transition-all">
             <CardContent className="p-4 flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-violet-50 border border-violet-100/50 flex items-center justify-center shrink-0">
-                <Users className="w-5 h-5 text-violet-600" />
+              <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100/50 flex items-center justify-center shrink-0">
+                <Users className="w-5 h-5 text-amber-600" />
               </div>
               <div className="space-y-0.5">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">New Leads</span>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-xl font-extrabold text-slate-950">{leadsCount}</span>
-                  <span className="text-[10px] text-violet-600 font-extrabold">Qualified</span>
+                  <span className="text-xl font-extrabold text-slate-950">{apiMetrics.totalClients || leadsCount}</span>
+                  <span className="text-[10px] text-amber-600 font-extrabold">{apiMetrics.newClientsThisMonth ? `+${apiMetrics.newClientsThisMonth} this month` : 'CRM records'}</span>
                 </div>
               </div>
             </CardContent>
           </Card>
 
+          <Card className="border-slate-200 bg-white shadow-3xs hover:border-slate-300 transition-all">
+            <CardContent className="p-4 flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-100/50 flex items-center justify-center shrink-0">
+                <MessageCircle className="w-5 h-5 text-rose-600" />
+              </div>
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Unread Conversations</span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-xl font-extrabold text-slate-950">{inboxStats.unread}</span>
+                  <span className="text-[10px] text-slate-500 font-semibold">{inboxStats.open} open</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200 bg-white shadow-3xs hover:border-slate-300 transition-all">
+            <CardContent className="p-4 flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-cyan-50 border border-cyan-100/50 flex items-center justify-center shrink-0">
+                <ClipboardList className="w-5 h-5 text-cyan-600" />
+              </div>
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Form Submissions</span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-xl font-extrabold text-slate-950">{formStats.total}</span>
+                  <span className="text-[10px] text-cyan-600 font-extrabold">{formStats.new} new</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 

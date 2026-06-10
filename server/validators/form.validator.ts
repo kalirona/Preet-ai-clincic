@@ -25,7 +25,10 @@ export const createFormSchema = z.object({
   settings: formSettingsSchema.optional().default({
     submitButtonText: "Submit",
     successMessage: "Thank you for your submission!",
+    redirectUrl: "",
+    notifyEmail: "",
     createConversation: true,
+    assignAgentId: "",
   }),
   brandColor: z.string().optional().default("#7c3aed"),
   isActive: z.boolean().optional().default(true),

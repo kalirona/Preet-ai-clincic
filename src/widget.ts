@@ -1,11 +1,24 @@
 /**
- * Preet AI Chat Widget
- * Embeddable floating chat widget for customer websites
+ * Preet AI Widget
+ * Embeddable chat widget + form renderer for customer websites
  * 
- * Usage:
+ * Chat Usage:
  *   <script src="https://yourdomain.com/widget.js"></script>
  *   <script>
  *     window.PreetAI.init({ agentId: "xxxxx" });
+ *   </script>
+ *
+ * Form Usage (inline):
+ *   <div id="preet-form-xxxxx"></div>
+ *   <script src="https://yourdomain.com/widget.js"></script>
+ *   <script>
+ *     window.PreetAI.renderForm({ formId: "xxxxx", target: "#preet-form-xxxxx" });
+ *   </script>
+ *
+ * Form Usage (popup):
+ *   <script src="https://yourdomain.com/widget.js"></script>
+ *   <script>
+ *     window.PreetAI.openForm({ formId: "xxxxx" });
  *   </script>
  */
 
@@ -428,14 +441,219 @@
     buildWidget();
   }
 
+  // ============================================
+  // FORM STYLES
+  // ============================================
+  function injectFormStyles(brandColor: string) {
+    const style = document.createElement('style');
+    style.className = 'preet-form-styles';
+    style.textContent = `
+      .preet-form-container { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; }
+      .preet-form-container * { box-sizing: border-box; margin: 0; padding: 0; }
+      .preet-form-title { font-size: 18px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+      .preet-form-desc { font-size: 13px; color: #6b7280; margin-bottom: 20px; }
+      .preet-form-field { margin-bottom: 16px; }
+      .preet-form-label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+      .preet-form-label .req { color: #ef4444; }
+      .preet-form-input, .preet-form-select, .preet-form-textarea {
+        width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px;
+        font-size: 13px; outline: none; transition: border-color 0.2s; background: white;
+      }
+      .preet-form-input:focus, .preet-form-select:focus, .preet-form-textarea:focus { border-color: ${brandColor}; }
+      .preet-form-textarea { min-height: 80px; resize: vertical; }
+      .preet-form-checkbox-wrap { display: flex; align-items: center; gap: 8px; }
+      .preet-form-checkbox { width: 16px; height: 16px; accent-color: ${brandColor}; }
+      .preet-form-submit {
+        width: 100%; padding: 12px; border: none; border-radius: 8px; background: ${brandColor};
+        color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+      }
+      .preet-form-submit:hover { opacity: 0.9; }
+      .preet-form-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+      .preet-form-success { text-align: center; padding: 32px 16px; }
+      .preet-form-success h3 { font-size: 16px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+      .preet-form-success p { font-size: 13px; color: #6b7280; }
+
+      .preet-form-overlay {
+        position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100000;
+        display: flex; align-items: center; justify-content: center; padding: 16px;
+      }
+      .preet-form-modal {
+        background: white; border-radius: 16px; padding: 24px; width: 100%; max-width: 480px;
+        max-height: 90vh; overflow-y: auto; position: relative;
+      }
+      .preet-form-modal-close {
+        position: absolute; top: 12px; right: 12px; background: #f3f4f6; border: none;
+        width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: flex;
+        align-items: center; justify-content: center; color: #6b7280;
+      }
+      .preet-form-modal-close:hover { background: #e5e7eb; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // ============================================
+  // FORM RENDERING
+  // ============================================
+  async function fetchFormConfig(formId: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/api/forms/public/${formId}`);
+    if (!res.ok) throw new Error('Form not found');
+    return res.json();
+  }
+
+  function buildFormHTML(form: any): string {
+    let html = `<div class="preet-form-container">`;
+    html += `<div class="preet-form-title">${form.name}</div>`;
+    if (form.description) html += `<div class="preet-form-desc">${form.description}</div>`;
+    html += `<form id="preet-form-${form.id}" novalidate>`;
+
+    for (const field of (form.fields || [])) {
+      html += `<div class="preet-form-field">`;
+      html += `<label class="preet-form-label">${field.label}${field.required ? ' <span class="req">*</span>' : ''}</label>`;
+
+      const placeholder = field.placeholder || '';
+      const requiredAttr = field.required ? 'required' : '';
+
+      switch (field.type) {
+        case 'textarea':
+          html += `<textarea class="preet-form-textarea" name="${field.name}" placeholder="${placeholder}" ${requiredAttr}></textarea>`;
+          break;
+        case 'select':
+          html += `<select class="preet-form-select" name="${field.name}" ${requiredAttr}>`;
+          html += `<option value="">${placeholder || 'Select...'}</option>`;
+          for (const opt of (field.options || [])) {
+            html += `<option value="${opt}">${opt}</option>`;
+          }
+          html += `</select>`;
+          break;
+        case 'checkbox':
+          html += `<div class="preet-form-checkbox-wrap"><input type="checkbox" class="preet-form-checkbox" name="${field.name}" ${requiredAttr} /><span>${placeholder || field.label}</span></div>`;
+          break;
+        default:
+          html += `<input type="${field.type}" class="preet-form-input" name="${field.name}" placeholder="${placeholder}" ${requiredAttr} />`;
+      }
+      html += `</div>`;
+    }
+
+    html += `<button type="submit" class="preet-form-submit">${form.settings?.submitButtonText || 'Submit'}</button>`;
+    html += `</form></div>`;
+    return html;
+  }
+
+  function bindFormSubmission(formId: string, form: any, container: HTMLElement) {
+    const formEl = container.querySelector(`#preet-form-${formId}`) as HTMLFormElement;
+    if (!formEl) return;
+
+    formEl.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const submitBtn = formEl.querySelector('.preet-form-submit') as HTMLButtonElement;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+
+      const answers: Record<string, any> = {};
+      const formData = new FormData(formEl);
+      for (const [key, value] of formData.entries()) {
+        answers[key] = value;
+      }
+      // Handle checkboxes
+      for (const field of (form.fields || [])) {
+        if (field.type === 'checkbox') {
+          answers[field.name] = formEl.querySelector(`[name="${field.name}"]`)?.getAttribute('checked') === 'true' || false;
+        }
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/forms/public/${formId}/submit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            answers,
+            visitorName: answers.name || answers.Name || undefined,
+            visitorEmail: answers.email || answers.Email || undefined,
+            visitorPhone: answers.phone || answers.Phone || undefined,
+          }),
+        });
+
+        if (!res.ok) throw new Error('Submission failed');
+
+        // Show success message
+        container.innerHTML = `
+          <div class="preet-form-container">
+            <div class="preet-form-success">
+              <h3>${form.settings?.successMessage || 'Thank you for your submission!'}</h3>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = form.settings?.submitButtonText || 'Submit';
+        console.error('[PreetAI] Form submission failed:', err);
+      }
+    });
+  }
+
+  function renderFormInline(options: { formId: string; target: string }) {
+    const targetEl = document.querySelector(options.target);
+    if (!targetEl) {
+      console.error(`[PreetAI] Target element "${options.target}" not found`);
+      return;
+    }
+
+    fetchFormConfig(options.formId).then(form => {
+      injectFormStyles(form.brandColor || '#7c3aed');
+      targetEl.innerHTML = buildFormHTML(form);
+      bindFormSubmission(options.formId, form, targetEl as HTMLElement);
+    }).catch(err => {
+      console.error('[PreetAI] Failed to load form:', err);
+    });
+  }
+
+  function openFormPopup(options: { formId: string }) {
+    fetchFormConfig(options.formId).then(form => {
+      injectFormStyles(form.brandColor || '#7c3aed');
+
+      const overlay = document.createElement('div');
+      overlay.className = 'preet-form-overlay';
+      overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+      const modal = document.createElement('div');
+      modal.className = 'preet-form-modal';
+
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'preet-form-modal-close';
+      closeBtn.innerHTML = svgClose();
+      closeBtn.onclick = () => overlay.remove();
+      modal.appendChild(closeBtn);
+
+      const formContainer = document.createElement('div');
+      formContainer.innerHTML = buildFormHTML(form);
+      modal.appendChild(formContainer);
+
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+
+      bindFormSubmission(options.formId, form, formContainer);
+    }).catch(err => {
+      console.error('[PreetAI] Failed to load form:', err);
+    });
+  }
+
+  // ============================================
+  // DESTROY
+  // ============================================
   function destroy() {
     if (pollInterval) clearInterval(pollInterval);
-    const container = document.getElementById('preet-ai-widget');
-    if (container) container.remove();
-    const styles = document.querySelectorAll('style');
-    styles.forEach(s => { if (s.textContent.includes('preet-ai')) s.remove(); });
+    const chatContainer = document.getElementById('preet-ai-widget');
+    if (chatContainer) chatContainer.remove();
+    document.querySelectorAll('.preet-form-overlay').forEach(el => el.remove());
+    document.querySelectorAll('.preet-form-styles').forEach(el => el.remove());
   }
 
   // Public API
-  (window as any).PreetAI = { init, close: togglePanel, destroy };
+  (window as any).PreetAI = {
+    init,
+    close: togglePanel,
+    destroy,
+    renderForm: renderFormInline,
+    openForm: openFormPopup,
+  };
 })();
