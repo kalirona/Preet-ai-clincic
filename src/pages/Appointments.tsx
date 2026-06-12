@@ -53,7 +53,7 @@ interface Client {
 }
 
 export function Appointments() {
-  const workspaceId = '1'; // Default sandbox tenant
+  const workspaceId = localStorage.getItem('activeWorkspaceId') || '1';
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -86,36 +86,39 @@ export function Appointments() {
       const headers = { 'x-workspace-id': workspaceId };
       
       // 1. Fetch appointments
-      let apptsRes: any = { data: [] };
+      let apptsData: any[] = [];
       try {
-        apptsRes = await axios.get('/api/appointments', { headers });
+        const apptsRes = await axios.get('/api/appointments', { headers });
+        apptsData = apptsRes.data?.data || apptsRes.data || [];
       } catch (e) {
         console.warn('DB Fetch fail, using fallback arrays:', e);
       }
 
       // 2. Fetch services
-      let srvsRes: any = { data: [] };
+      let srvsData: any[] = [];
       try {
-        srvsRes = await axios.get('/api/services', { headers });
+        const srvsRes = await axios.get('/api/services', { headers });
+        srvsData = srvsRes.data?.data || srvsRes.data || [];
       } catch (e) {
         console.warn('Services fetch fail:', e);
       }
 
       // 3. Fetch clients to bind to manually booked dropdowns
-      let clsRes: any = { data: [] };
+      let clsData: any[] = [];
       try {
-        clsRes = await axios.get('/api/clients', { headers });
+        const clsRes = await axios.get('/api/clients', { headers });
+        clsData = clsRes.data?.data || clsRes.data || [];
       } catch (e) {
         console.warn('Clients query failed:', e);
       }
 
-      setServices(srvsRes.data || []);
-      setClients(clsRes.data || []);
+      setServices(srvsData);
+      setClients(clsData);
 
       // Re-map raw appointments to bind service properties and client names
-      const mappedAppts = (apptsRes.data || []).map((item: any) => {
-        const foundSrv = (srvsRes.data || []).find((s: any) => s.id === item.serviceId);
-        const foundCl = (clsRes.data || []).find((c: any) => c.id === item.clientId);
+      const mappedAppts = apptsData.map((item: any) => {
+        const foundSrv = srvsData.find((s: any) => s.id === item.serviceId);
+        const foundCl = clsData.find((c: any) => c.id === item.clientId);
         return {
           ...item,
           serviceName: foundSrv ? foundSrv.name : 'Primary Styling Consult',
@@ -154,7 +157,7 @@ export function Appointments() {
       }
 
       // If DB services list is empty, synchronize beautiful defaults for Salon A
-      if ((srvsRes.data || []).length === 0) {
+      if (srvsData.length === 0) {
         const defaultServicesList = [
           {
             id: "srv-00000000-0000-0000-0000-000000000001",

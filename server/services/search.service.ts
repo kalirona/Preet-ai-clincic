@@ -1,6 +1,5 @@
+import { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseServerClient } from "../middleware/requireAuth";
-import { ClientService } from "./client.service";
-import { DocumentService } from "./document.service";
 
 export interface SearchResultItem {
   id: string;
@@ -13,83 +12,95 @@ export interface SearchResultItem {
   metadata?: any;
 }
 
+interface SearchParams {
+  workspaceId: string;
+  q: string;
+  supabase?: SupabaseClient;
+}
+
 export class SearchService {
-  /**
-   * Universal high-fidelity search across multiple collections inside the workspace client partition.
-   */
-  static async searchAll(workspaceId: string, q: string): Promise<SearchResultItem[]> {
-    const searchTerm = (q || "").trim().toLowerCase();
+  static async searchAll(params: SearchParams): Promise<SearchResultItem[]> {
+    const { workspaceId, q, supabase: optionalClient } = params;
+    const searchTerm = (q || "").trim();
     if (!searchTerm) return [];
 
+    const client = optionalClient || getSupabaseServerClient();
     const results: SearchResultItem[] = [];
 
-    // 1. SEARCH CLIENT DATA & CLIENT NOTES
+    // 1. SEARCH CLIENTS (first_name, last_name, email, phone, tag)
     try {
-      const clientsResult = await ClientService.getClients(workspaceId, { limit: 200 });
-      const clients = clientsResult.data;
-      const matchedClients = clients.filter((c) => {
-        return (
-          c.firstName.toLowerCase().includes(searchTerm) ||
-          c.lastName?.toLowerCase().includes(searchTerm) ||
-          c.email?.toLowerCase().includes(searchTerm) ||
-          c.phone?.toLowerCase().includes(searchTerm) ||
-          c.tag?.toLowerCase().includes(searchTerm)
-        );
-      });
+      const { data: clients, error } = await client
+        .from("clients")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .is("deleted_at", null)
+        .or(
+          `first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,tag.ilike.%${searchTerm}%`
+        )
+        .limit(20)
+        .order("created_at", { ascending: false });
 
-      for (const client of matchedClients) {
+      if (error) throw error;
+
+      for (const c of clients || []) {
         results.push({
-          id: client.id,
+          id: c.id,
           type: "client",
-          title: `${client.firstName} ${client.lastName || ""}`.trim(),
-          subtitle: client.email || client.phone || "No contact details",
-          description: client.tag ? `Tag: ${client.tag}` : undefined,
-          date: client.createdAt as string,
-          metadata: { client },
-        });
-      }
-
-      // Notes sub-tier search inside Clients
-      const matchedNotes = clients.filter((c) => c.notes?.toLowerCase().includes(searchTerm));
-      for (const client of matchedNotes) {
-        results.push({
-          id: `note_client_${client.id}`,
-          type: "note",
-          title: `Notes: ${client.firstName} ${client.lastName || ""}`.trim(),
-          subtitle: "Client Profile Notes",
-          description: client.notes,
-          date: client.createdAt as string,
-          metadata: { clientId: client.id, type: "client" },
+          title: `${c.first_name} ${c.last_name || ""}`.trim(),
+          subtitle: c.email || c.phone || "No contact details",
+          description: c.tag ? `Tag: ${c.tag}` : undefined,
+          date: c.created_at,
+          metadata: { client: c },
         });
       }
     } catch (err) {
-      console.warn("[SearchService] Client query search error:", err);
+      console.warn("[SearchService] Client search error:", err);
     }
 
-    // 2. SEARCH APPOINTMENTS & APPOINTMENT NOTES
+    // 2. SEARCH CLIENT NOTES
     try {
-      const supabase = getSupabaseServerClient();
-      const { data: appointmentsRaw, error } = await supabase
+      const { data: notes, error } = await client
+        .from("clients")
+        .select("id, first_name, last_name, notes, created_at")
+        .eq("workspace_id", workspaceId)
+        .is("deleted_at", null)
+        .not("notes", "is", null)
+        .ilike("notes", `%${searchTerm}%`)
+        .limit(10)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      for (const c of notes || []) {
+        results.push({
+          id: `note_client_${c.id}`,
+          type: "note",
+          title: `Notes: ${c.first_name} ${c.last_name || ""}`.trim(),
+          subtitle: "Client Profile Notes",
+          description: c.notes,
+          date: c.created_at,
+          metadata: { clientId: c.id, type: "client" },
+        });
+      }
+    } catch (err) {
+      console.warn("[SearchService] Client notes search error:", err);
+    }
+
+    // 3. SEARCH APPOINTMENTS (staff_name, status)
+    try {
+      const { data: appointments, error } = await client
         .from("appointments")
-        .select(`
-          id,
-          staff_name,
-          start_time,
-          status,
-          notes,
-          client_id
-        `)
-        .eq("workspace_id", workspaceId);
+        .select("id, staff_name, start_time, status, notes, client_id")
+        .eq("workspace_id", workspaceId)
+        .or(
+          `staff_name.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%`
+        )
+        .limit(20)
+        .order("start_time", { ascending: false });
 
-      const appointments = error ? [] : appointmentsRaw || [];
-      const matchedAppointments = appointments.filter((app: any) => {
-        return (
-          app.staff_name.toLowerCase().includes(searchTerm) ||
-          app.status.toLowerCase().includes(searchTerm)
-        );
-      });
+      if (error) throw error;
 
-      for (const app of matchedAppointments) {
+      for (const app of appointments || []) {
         results.push({
           id: app.id,
           type: "appointment",
@@ -100,10 +111,24 @@ export class SearchService {
           metadata: { appointment: app },
         });
       }
+    } catch (err) {
+      console.warn("[SearchService] Appointment search error:", err);
+    }
 
-      // Notes inside Appointments
-      const matchedAppNotes = appointments.filter((app: any) => app.notes?.toLowerCase().includes(searchTerm));
-      for (const app of matchedAppNotes) {
+    // 4. SEARCH APPOINTMENT NOTES
+    try {
+      const { data: appNotes, error } = await client
+        .from("appointments")
+        .select("id, staff_name, start_time, notes, client_id")
+        .eq("workspace_id", workspaceId)
+        .not("notes", "is", null)
+        .ilike("notes", `%${searchTerm}%`)
+        .limit(10)
+        .order("start_time", { ascending: false });
+
+      if (error) throw error;
+
+      for (const app of appNotes || []) {
         results.push({
           id: `note_app_${app.id}`,
           type: "note",
@@ -115,28 +140,24 @@ export class SearchService {
         });
       }
     } catch (err) {
-      console.warn("[SearchService] Appointment query search error:", err);
+      console.warn("[SearchService] Appointment notes search error:", err);
     }
 
-    // 3. SEARCH CLIENT ACTIVITIES
+    // 5. SEARCH CLIENT ACTIVITIES
     try {
-      const supabase = getSupabaseServerClient();
-      const { data: activitiesRaw, error } = await supabase
+      const { data: activities, error } = await client
         .from("client_activities")
         .select("*")
         .eq("workspace_id", workspaceId)
+        .or(
+          `title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,type.ilike.%${searchTerm}%`
+        )
+        .limit(20)
         .order("created_at", { ascending: false });
 
-      const activities = error ? [] : activitiesRaw || [];
-      const matchedActivities = activities.filter((act: any) => {
-        return (
-          act.title.toLowerCase().includes(searchTerm) ||
-          act.description?.toLowerCase().includes(searchTerm) ||
-          act.type.toLowerCase().includes(searchTerm)
-        );
-      });
+      if (error) throw error;
 
-      for (const act of matchedActivities) {
+      for (const act of activities || []) {
         results.push({
           id: act.id,
           type: "activity",
@@ -151,26 +172,29 @@ export class SearchService {
       console.warn("[SearchService] Activity search error:", err);
     }
 
-    // 4. SEARCH UPLOADED DOCUMENTS / INVOICES / ATTACHMENTS
+    // 6. SEARCH DOCUMENTS
     try {
-      const docs = await DocumentService.getDocuments(workspaceId);
-      const matchedDocs = docs.filter((doc) => {
-        return (
-          doc.name.toLowerCase().includes(searchTerm) ||
-          doc.category.toLowerCase().includes(searchTerm) ||
-          doc.mimeType?.toLowerCase().includes(searchTerm)
-        );
-      });
+      const { data: docs, error } = await client
+        .from("documents")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .or(
+          `name.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,mime_type.ilike.%${searchTerm}%`
+        )
+        .limit(20)
+        .order("created_at", { ascending: false });
 
-      for (const doc of matchedDocs) {
+      if (error) throw error;
+
+      for (const doc of docs || []) {
         results.push({
           id: doc.id,
           type: "document",
           title: doc.name,
-          subtitle: `${doc.category.toUpperCase()} | ${(doc.fileSize ? (doc.fileSize / 1024).toFixed(1) : "0")} KB`,
-          description: `Document uploaded on ${new Date(doc.createdAt).toLocaleDateString()}`,
-          url: doc.fileUrl,
-          date: doc.createdAt as string,
+          subtitle: `${doc.category.toUpperCase()} | ${(doc.file_size ? (doc.file_size / 1024).toFixed(1) : "0")} KB`,
+          description: `Document uploaded on ${new Date(doc.created_at).toLocaleDateString()}`,
+          url: doc.file_url,
+          date: doc.created_at,
           metadata: { document: doc },
         });
       }

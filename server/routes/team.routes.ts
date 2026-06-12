@@ -1,7 +1,7 @@
 import { Router, Response, NextFunction } from "express";
 import { teamRateLimiter } from "../middleware/rateLimiters";
-import { requireAuth } from "../middleware/requireAuth";
-import { requireRole } from "../middleware/requireRole";
+import { getSupabaseServerClient, requireAuth } from "../middleware/requireAuth";
+import { requireRole, invalidateMembershipCache } from "../middleware/requireRole";
 import { validateRequest } from "../middleware/validateRequest";
 import { AuthenticatedRequest } from "../types/auth";
 import { ApiError } from "../types/errors";
@@ -131,10 +131,36 @@ router.post(
       const workspaceId = await getWorkspaceId(req);
       const { email, role } = req.body;
 
-      // Create a persistent user identity reference in workspace members
-      const randomUserId = crypto.randomUUID();
-      const newMember = await TeamService.inviteMember(workspaceId, randomUserId, role);
-      
+      const supabase = getSupabaseServerClient();
+
+      // Try to create the user, or look up if already exists
+      let userId: string;
+      const tempPassword = crypto.randomUUID().slice(0, 16) + "!Aa1";
+      const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+        email,
+        password: tempPassword,
+        email_confirm: true,
+      });
+
+      if (createError && createError.message?.includes("already exists")) {
+        // Look up existing user by email
+        const { data: userList } = await supabase.auth.admin.listUsers();
+        const users = userList?.users || [];
+        const existing = users.find((u: any) => u.email === email);
+        if (!existing) throw new ApiError(400, "User already exists but could not be found.");
+        userId = existing.id;
+      } else if (createError) {
+        throw new ApiError(400, createError.message);
+      } else {
+        userId = newUser.user.id;
+      }
+
+      // Add to workspace members
+      const newMember = await TeamService.inviteMember(workspaceId, userId, role);
+
+      // Invalidate role cache so permissions take effect
+      invalidateMembershipCache(workspaceId, userId);
+
       res.status(201).json({
         ...newMember,
         email,

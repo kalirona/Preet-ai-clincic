@@ -25,7 +25,7 @@ router.get(
         return res.json([]);
       }
 
-      const results = await SearchService.searchAll(workspaceId, q);
+      const results = await SearchService.searchAll({ workspaceId, supabase: req.supabase, q });
       res.json(results);
     } catch (err) {
       next(err);

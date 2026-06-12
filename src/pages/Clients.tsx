@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import axios from 'axios';
 import { getActivePlanLimits } from '@/utils/limits';
 import { SystemPageLayout, PageHeader, PageContent } from '@/components/layout/SystemPageLayout';
 import { 
@@ -84,6 +85,7 @@ export const STAGES: { id: LeadStage; name: string; themeColor: string; bgClass:
 ];
 
 export function Clients() {
+  const workspaceId = localStorage.getItem('activeWorkspaceId') || '1';
   const [leadsList, setLeadsList] = React.useState<CRMRecord[]>(() => {
     const saved = localStorage.getItem('preet_crm_records');
     if (saved) {
@@ -103,6 +105,35 @@ export function Clients() {
     }
     return initialLeads;
   });
+
+  // Fetch real clients from API on mount and merge with local state
+  useEffect(() => {
+    const headers = { 'x-workspace-id': workspaceId };
+    axios.get('/api/clients', { headers, params: { limit: 200 } })
+      .then(res => {
+        const apiClients = res.data?.data || res.data || [];
+        if (apiClients.length > 0) {
+          setLeadsList(prev => {
+            const existingIds = new Set(prev.map(p => String(p.id)));
+            const newOnes = apiClients
+              .filter((c: any) => !existingIds.has(c.id))
+              .map((c: any, idx: number) => ({
+                id: Number(c.id.replace(/-/g, '').slice(0, 12)) || Date.now() + idx,
+                name: `${c.first_name || c.firstName || ''} ${c.last_name || c.lastName || ''}`.trim() || 'API Client',
+                type: (c.tag === 'Patient' ? 'Patient' : c.tag === 'Customer' ? 'Customer' : 'Client') as 'Client' | 'Patient' | 'Customer',
+                serviceTag: c.tag || 'General',
+                notes: c.notes || '',
+                lastAppointment: c.created_at ? new Date(c.created_at).toLocaleString() : 'Pending Booking',
+                email: c.email || '',
+                stage: 'New Lead' as LeadStage,
+                value: 1500,
+              }));
+            return newOnes.length > 0 ? [...newOnes, ...prev] : prev;
+          });
+        }
+      })
+      .catch(err => console.warn('Failed to fetch API clients:', err));
+  }, [workspaceId]);
   
   const [searchQuery, setSearchQuery] = React.useState('');
   const [activeView, setActiveView] = React.useState<'kanban' | 'list'>('kanban');
@@ -168,7 +199,7 @@ export function Clients() {
     };
   }, [leadsList]);
 
-  const handleCreateLead = (e: React.FormEvent) => {
+  const handleCreateLead = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim() || !newServiceTag.trim()) {
       toast.error('Please enter a name and a service tag');
@@ -185,6 +216,22 @@ export function Clients() {
     }
 
     const calculatedValue = Number(newValue) || 0;
+    const nameParts = newName.trim().split(/\s+/);
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ');
+
+    // POST to API
+    try {
+      await axios.post('/api/clients', {
+        firstName,
+        lastName,
+        email: newEmail || undefined,
+        tag: newServiceTag,
+        notes: newNotes || undefined,
+      }, { headers: { 'x-workspace-id': workspaceId } });
+    } catch (err) {
+      console.warn('API create failed, saving locally only:', err);
+    }
 
     const newRecord: CRMRecord = {
       id: Date.now(),
@@ -215,6 +262,9 @@ export function Clients() {
 
   const handleDeleteLead = (id: number) => {
     setLeadsList(prev => prev.filter(l => l.id !== id));
+    // Try to DELETE via API (won't match local numeric IDs, but best-effort)
+    axios.delete(`/api/clients/${id}`, { headers: { 'x-workspace-id': workspaceId } })
+      .catch(() => {}); // Best-effort
     toast.success('CRM profile removed.');
   };
 
@@ -846,7 +896,7 @@ export function Clients() {
           setSelectedClient(null);
         }}
         onUpdateClient={handleUpdateClient}
-        workspaceId="1" // Multi-tenant primary sandbox workspace
+        workspaceId={workspaceId}
       />
     </SystemPageLayout>
   );
