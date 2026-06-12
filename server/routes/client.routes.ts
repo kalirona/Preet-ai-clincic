@@ -20,7 +20,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const includeDeleted = req.query.includeDeleted === "true";
       const clients = await ClientService.getClients(workspaceId, includeDeleted);
       res.json(clients);
@@ -38,7 +38,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const clientId = req.params.id;
       const client = await ClientService.getClientById(clientId, workspaceId);
       
@@ -62,7 +62,7 @@ router.post(
   validateRequest(createClientSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const newClient = await ClientService.createClient(workspaceId, req.body);
       
       // Track audit event
@@ -96,7 +96,7 @@ router.put(
   validateRequest(updateClientSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const clientId = req.params.id;
       const updatedClient = await ClientService.updateClient(clientId, workspaceId, req.body);
       
@@ -134,7 +134,7 @@ router.delete(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const clientId = req.params.id;
       
       const client = await ClientService.getClientById(clientId, workspaceId);
@@ -170,7 +170,7 @@ router.post(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const clientId = req.params.id;
 
       // Fetch client with includeDeleted flag set to true

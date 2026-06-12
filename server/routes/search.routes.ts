@@ -18,7 +18,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const q = req.query.q as string;
 
       if (!q || !q.trim()) {

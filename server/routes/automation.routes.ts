@@ -31,7 +31,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const list = await AutomationService.getAutomations(workspaceId);
       res.json(list);
     } catch (err) {
@@ -49,7 +49,7 @@ router.post(
   validateRequest(createAutomationSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const rule = await AutomationService.createAutomation(workspaceId, req.body);
       res.status(201).json(rule);
     } catch (err) {
@@ -67,7 +67,7 @@ router.put(
   validateRequest(updateAutomationSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const updated = await AutomationService.updateAutomation(req.params.id, workspaceId, req.body);
       res.json(updated);
     } catch (err) {
@@ -84,7 +84,7 @@ router.delete(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const success = await AutomationService.deleteAutomation(req.params.id, workspaceId);
       if (!success) {
         throw new ApiError(404, "Automation rule not found or unauthorized.");
@@ -106,7 +106,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const list = await AutomationService.getTemplates(workspaceId);
       res.json(list);
     } catch (err) {
@@ -124,7 +124,7 @@ router.post(
   validateRequest(createTemplateSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const template = await AutomationService.createTemplate(workspaceId, req.body);
       res.status(201).json(template);
     } catch (err) {
@@ -142,7 +142,7 @@ router.put(
   validateRequest(updateTemplateSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const updated = await AutomationService.updateTemplate(req.params.id, workspaceId, req.body);
       res.json(updated);
     } catch (err) {
@@ -159,7 +159,7 @@ router.delete(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const success = await AutomationService.deleteTemplate(req.params.id, workspaceId);
       if (!success) {
         throw new ApiError(404, "Template not found or unauthorized.");
@@ -179,7 +179,7 @@ router.post(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const { triggerType, contextData } = req.body;
       
       if (!triggerType) {

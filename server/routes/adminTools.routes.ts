@@ -63,7 +63,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const type = (req.query.type as string || "clients").toLowerCase();
       const format = (req.query.format as string || "csv").toLowerCase();
 
@@ -298,7 +298,7 @@ router.get(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const filtered = snapshotVault.filter((s: any) => s.workspaceId === workspaceId);
       res.json(filtered.map(({ data, ...rest }: any) => rest));
     } catch (err) {
@@ -315,7 +315,7 @@ router.post(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const userEmail = req.user?.email || "superadmin@preet.ai";
 
       // Gather active records matching the tenant boundary context limits
@@ -371,7 +371,7 @@ router.post(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const { snapshotId } = req.body;
 
       if (!snapshotId) {
@@ -414,7 +414,7 @@ router.post(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       
       await AuditLogService.createLog({
         workspaceId,

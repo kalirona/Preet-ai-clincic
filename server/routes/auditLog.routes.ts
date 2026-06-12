@@ -23,7 +23,7 @@ router.get(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const entityType = req.query.entityType as string | undefined;
       const search = req.query.search as string | undefined;
       const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
@@ -50,7 +50,7 @@ router.post(
   validateRequest(createAuditLogSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const { action, entityType, entityId } = req.body;
       const userId = req.user?.id;
       const ipAddress = (req.headers["x-forwarded-for"] as string) || req.ip;

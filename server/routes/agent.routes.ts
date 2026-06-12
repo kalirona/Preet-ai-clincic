@@ -18,7 +18,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const agents = await AgentService.getAll(workspaceId);
       res.json(agents);
     } catch (err) {
@@ -34,7 +34,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const agent = await AgentService.getById(req.params.id, workspaceId);
       if (!agent) throw new ApiError(404, "Agent not found.");
       res.json(agent);
@@ -52,7 +52,7 @@ router.post(
   validateRequest(createAgentSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const agent = await AgentService.create(workspaceId, req.body);
       await AuditLogService.createLog({
         workspaceId,
@@ -78,7 +78,7 @@ router.put(
   validateRequest(updateAgentSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const agent = await AgentService.update(req.params.id, workspaceId, req.body);
       if (!agent) throw new ApiError(404, "Agent not found.");
       await AuditLogService.createLog({
@@ -104,7 +104,7 @@ router.delete(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const agent = await AgentService.getById(req.params.id, workspaceId);
       if (!agent) throw new ApiError(404, "Agent not found.");
       await AgentService.delete(req.params.id, workspaceId);
@@ -131,7 +131,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const files = await AgentService.getKnowledgeFiles(req.params.id, workspaceId);
       res.json(files);
     } catch (err) {
@@ -147,7 +147,7 @@ router.post(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const agent = await AgentService.getById(req.params.id, workspaceId);
       if (!agent) throw new ApiError(404, "Agent not found.");
       const file = await AgentService.addKnowledgeFile(req.params.id, workspaceId, req.body);
@@ -165,7 +165,7 @@ router.delete(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       await AgentService.deleteKnowledgeFile(req.params.fileId, workspaceId);
       res.json({ success: true, message: "Knowledge file removed." });
     } catch (err) {

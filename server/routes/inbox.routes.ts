@@ -17,7 +17,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const { status, source, search, agentId } = req.query;
       const conversations = await InboxService.getConversations(workspaceId, {
         status: status as any,
@@ -39,7 +39,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const stats = await InboxService.getConversationStats(workspaceId);
       res.json(stats);
     } catch (err) {
@@ -55,7 +55,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const conversation = await InboxService.getConversationById(req.params.id, workspaceId);
       if (!conversation) throw new ApiError(404, "Conversation not found.");
       res.json(conversation);
@@ -72,7 +72,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const messages = await InboxService.getMessages(req.params.id, workspaceId);
       res.json(messages);
     } catch (err) {
@@ -89,7 +89,7 @@ router.post(
   validateRequest(sendMessageSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const conversation = await InboxService.getConversationById(req.params.id, workspaceId);
       if (!conversation) throw new ApiError(404, "Conversation not found.");
 
@@ -117,7 +117,7 @@ router.put(
   validateRequest(updateConversationSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const conversation = await InboxService.updateConversation(req.params.id, workspaceId, req.body);
       if (!conversation) throw new ApiError(404, "Conversation not found.");
       res.json(conversation);
@@ -134,7 +134,7 @@ router.post(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const conversation = await InboxService.archiveConversation(req.params.id, workspaceId);
       if (!conversation) throw new ApiError(404, "Conversation not found.");
       res.json(conversation);
@@ -151,7 +151,7 @@ router.post(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       await InboxService.markAsRead(req.params.id, workspaceId);
       res.json({ success: true });
     } catch (err) {

@@ -25,7 +25,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const members = await TeamService.getWorkspaceMembers(workspaceId);
       res.json(members);
     } catch (err) {
@@ -42,7 +42,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const { userId } = req.params;
       const member = await TeamService.getMember(workspaceId, userId);
       if (!member) {
@@ -64,7 +64,7 @@ router.put(
   validateRequest(updateMemberRoleSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const { userId } = req.params;
       const { role } = req.body;
 
@@ -103,7 +103,7 @@ router.delete(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const { userId } = req.params;
 
       const member = await TeamService.getMember(workspaceId, userId);
@@ -128,7 +128,7 @@ router.post(
   validateRequest(inviteMemberSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const { email, role } = req.body;
 
       // Create a persistent user identity reference in workspace members

@@ -23,7 +23,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const forms = await FormService.getAll(workspaceId);
       res.json(forms);
     } catch (err) {
@@ -39,7 +39,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const stats = await FormService.getResponseStats(workspaceId);
       res.json(stats);
     } catch (err) {
@@ -55,7 +55,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const { formId, status, search } = req.query;
       const responses = await FormService.getResponses(workspaceId, {
         formId: formId as string,
@@ -76,7 +76,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const response = await FormService.getResponseById(req.params.id, workspaceId);
       if (!response) throw new ApiError(404, "Response not found.");
       res.json(response);
@@ -94,7 +94,7 @@ router.put(
   validateRequest(updateResponseSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const response = await FormService.updateResponse(req.params.id, workspaceId, req.body);
       if (!response) throw new ApiError(404, "Response not found.");
       res.json(response);
@@ -111,7 +111,7 @@ router.delete(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       await FormService.deleteResponse(req.params.id, workspaceId);
       res.json({ success: true, message: "Response deleted." });
     } catch (err) {
@@ -127,7 +127,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const form = await FormService.getById(req.params.id, workspaceId);
       if (!form) throw new ApiError(404, "Form not found.");
       res.json(form);
@@ -144,7 +144,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const form = await FormService.getById(req.params.id, workspaceId);
       if (!form) throw new ApiError(404, "Form not found.");
       const origin = req.headers.origin || `${req.protocol}://${req.get("host")}`;
@@ -167,7 +167,7 @@ router.post(
   validateRequest(createFormSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const form = await FormService.create(workspaceId, req.body);
       await AuditLogService.createLog({
         workspaceId,
@@ -193,7 +193,7 @@ router.put(
   validateRequest(updateFormSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const form = await FormService.update(req.params.id, workspaceId, req.body);
       if (!form) throw new ApiError(404, "Form not found.");
       await AuditLogService.createLog({
@@ -219,7 +219,7 @@ router.delete(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const form = await FormService.getById(req.params.id, workspaceId);
       if (!form) throw new ApiError(404, "Form not found.");
       await FormService.delete(req.params.id, workspaceId);

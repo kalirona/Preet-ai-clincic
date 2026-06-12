@@ -4,25 +4,37 @@ import { AppointmentService } from "../services/appointment.service";
 import { ClientService } from "../services/client.service";
 import { ClientActivityService } from "../services/clientActivity.service";
 import { getSupabaseServerClient } from "../middleware/requireAuth";
+import { ApiError } from "../types/errors";
 
 const publicBookingRouter = Router();
 
-// Help resolve slug mappings safely
-const getWorkspaceDetails = async (slug: string) => {
-  const isSalonA = slug.toLowerCase() === "salon-a" || slug === "1";
-  const workspaceId = "1"; // Default/Sandbox ID
-  const workspaceName = isSalonA ? "Salon A - Revitalise High Performance Beauty" : "Professional Practice Space";
-  
-  return {
-    id: workspaceId,
-    name: workspaceName,
-    slug: slug,
-    description: isSalonA 
-      ? "Experience Premium Hair, Aesthetics, and Bespoke styling with Preet AI's high performance salon framework."
-      : "Schedule expert face-to-face or digital consults instantly.",
-    contactEmail: "contact@preetai.com",
-    contactPhone: "+1 (555) 732-8422"
-  };
+// Resolve workspace from slug - queries database for workspace by slug
+const getWorkspaceBySlug = async (slug: string) => {
+  try {
+    const supabase = getSupabaseServerClient();
+    const { data: workspace, error } = await supabase
+      .from("workspaces")
+      .select("id, name, slug, description, contact_email, contact_phone")
+      .eq("slug", slug.toLowerCase())
+      .eq("is_active", true)
+      .single();
+
+    if (error || !workspace) {
+      return null;
+    }
+
+    return {
+      id: workspace.id,
+      name: workspace.name,
+      slug: workspace.slug,
+      description: workspace.description,
+      contactEmail: workspace.contact_email,
+      contactPhone: workspace.contact_phone,
+    };
+  } catch (err) {
+    console.warn("[PublicBooking] Workspace lookup failed:", err);
+    return null;
+  }
 };
 
 /**
@@ -32,15 +44,15 @@ const getWorkspaceDetails = async (slug: string) => {
 publicBookingRouter.get("/:slug", publicRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const slug = req.params.slug || "salon-a";
-    const workspace = await getWorkspaceDetails(slug);
+    const workspace = await getWorkspaceBySlug(slug);
     
+    if (!workspace) {
+      throw new ApiError(404, "Workspace not found or inactive.");
+    }
+
     let dbServices: any[] = [];
     try {
-      const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
-      const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
-      if (supabaseUrl && supabaseAnonKey) {
-        dbServices = await AppointmentService.getServices(workspace.id);
-      }
+      dbServices = await AppointmentService.getServices(workspace.id);
     } catch (dbErr) {
       console.warn("[PublicBooking] Supabase fetch omitted or failed, falling back to mock services:", dbErr);
     }
@@ -133,7 +145,10 @@ publicBookingRouter.post("/book", publicRateLimiter, async (req: Request, res: R
       return res.status(400).json({ error: "Missing required booking details (First name, email, date, and timeslot are required)." });
     }
 
-    const workspace = await getWorkspaceDetails(slug || "salon-a");
+    const workspace = await getWorkspaceBySlug(slug || "salon-a");
+    if (!workspace) {
+      throw new ApiError(404, "Workspace not found or inactive.");
+    }
     const workspaceId = workspace.id;
 
     // Convert timeslot string (e.g. "10:00 AM") to start/end ISO times

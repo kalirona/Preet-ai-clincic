@@ -25,6 +25,27 @@ function setCachedMembership(workspaceId: string, userId: string, role: Workspac
 }
 
 /**
+ * Invalidate cached membership for a user in a workspace.
+ * Call after role changes to prevent stale permissions.
+ */
+export function invalidateMembershipCache(workspaceId: string, userId: string): void {
+  const key = `${workspaceId}:${userId}`;
+  membershipCache.delete(key);
+}
+
+/**
+ * Invalidate all cached memberships for a workspace.
+ * Call after bulk role changes.
+ */
+export function invalidateWorkspaceMembershipCache(workspaceId: string): void {
+  for (const key of membershipCache.keys()) {
+    if (key.startsWith(`${workspaceId}:`)) {
+      membershipCache.delete(key);
+    }
+  }
+}
+
+/**
  * Middleware to restrict endpoints based on the user's workspace role.
  * Queries the real PostgreSQL database via WorkspaceService to enforce robust tenancy checks.
  */
@@ -68,21 +89,12 @@ export const requireRole = (allowedRoles: WorkspaceRole[]) => {
         }
       }
 
-      // 4. Resilient fallback: Try to resolve from any active user workspace context if not explicitly isolated
-      if (!userRole) {
-        const workspaces = await WorkspaceService.getUserWorkspaces(req.user.id);
-        if (workspaces && workspaces.length > 0) {
-          userRole = workspaces[0].role;
-          req.user.role = userRole;
-        }
+      // 4. NO FALLBACK: Require explicit workspace context
+      if (!userRole || !workspaceId) {
+        throw new ApiError(403, "Forbidden: workspace context required.");
       }
 
-      // 5. Fallback check for missing or unavailable role metadata
-      if (!userRole) {
-        throw new ApiError(403, "Forbidden");
-      }
-
-      // 6. Validate if the user role belongs to the authorized roles configuration array
+      // 5. Validate if the user role belongs to the authorized roles configuration array
       if (!allowedRoles.includes(userRole)) {
         throw new ApiError(403, "Forbidden");
       }

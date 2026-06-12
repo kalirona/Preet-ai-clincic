@@ -7,7 +7,7 @@ import { ApiError } from "../types/errors";
 import { WebhookService } from "../services/webhook.service";
 import { AuditLogService } from "../services/auditLog.service";
 
-import { getWorkspaceIdLenient } from "../utils/workspace";
+import { getWorkspaceId } from "../utils/workspace";
 
 const router = Router();
 
@@ -19,7 +19,7 @@ router.get(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceIdLenient(req);
+      const workspaceId = await getWorkspaceId(req);
       const subs = await WebhookService.getSubscriptions(workspaceId);
       res.json(subs);
     } catch (err) {
@@ -36,7 +36,7 @@ router.post(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceIdLenient(req);
+      const workspaceId = await getWorkspaceId(req);
       const { url, events } = req.body;
 
       if (!url) {
@@ -74,7 +74,7 @@ router.delete(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceIdLenient(req);
+      const workspaceId = await getWorkspaceId(req);
       const subId = req.params.id;
 
       await WebhookService.deleteSubscription(workspaceId, subId);
@@ -105,7 +105,7 @@ router.post(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceIdLenient(req);
+      const workspaceId = await getWorkspaceId(req);
       const subId = req.params.id;
       const { testEvent } = req.body;
 

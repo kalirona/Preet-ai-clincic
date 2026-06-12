@@ -7,7 +7,7 @@ import { ApiError } from "../types/errors";
 import { ApiKeyService } from "../services/apiKey.service";
 import { AuditLogService } from "../services/auditLog.service";
 
-import { getWorkspaceIdLenient } from "../utils/workspace";
+import { getWorkspaceId } from "../utils/workspace";
 
 const router = Router();
 
@@ -19,7 +19,7 @@ router.get(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceIdLenient(req);
+      const workspaceId = await getWorkspaceId(req);
       const keys = await ApiKeyService.getApiKeys(workspaceId);
       // Strip actual secret key strings apart from returning masks for security list display
       const listData = keys.map(k => ({
@@ -47,7 +47,7 @@ router.post(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceIdLenient(req);
+      const workspaceId = await getWorkspaceId(req);
       const { name, scopes, expiresDays } = req.body;
 
       if (!name) {
@@ -97,7 +97,7 @@ router.delete(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceIdLenient(req);
+      const workspaceId = await getWorkspaceId(req);
       const keyId = req.params.id;
 
       await ApiKeyService.revokeApiKey(workspaceId, keyId);

@@ -125,7 +125,19 @@ export class StorageService {
       // If of type local, remove from directory
       if (fileUrl.startsWith("/uploads/")) {
         const fileName = fileUrl.replace("/uploads/", "");
+        // Prevent path traversal: only allow alphanumeric, underscore, dash, dot
+        if (!/^[a-zA-Z0-9._-]+$/.test(fileName)) {
+          console.warn(`[StorageService] Invalid filename rejected: ${fileName}`);
+          return false;
+        }
         const filePath = path.join(process.cwd(), "uploads", fileName);
+        // Ensure the resolved path is within the uploads directory
+        const resolvedPath = path.resolve(filePath);
+        const uploadsDir = path.resolve(process.cwd(), "uploads");
+        if (!resolvedPath.startsWith(uploadsDir)) {
+          console.warn(`[StorageService] Path traversal attempt blocked: ${fileName}`);
+          return false;
+        }
         try {
           await fs.access(filePath);
           await fs.unlink(filePath);

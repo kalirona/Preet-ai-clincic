@@ -32,7 +32,7 @@ appointmentRouter.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const appointments = await AppointmentService.getAppointments(workspaceId);
       res.json(appointments);
     } catch (err) {
@@ -49,7 +49,7 @@ appointmentRouter.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const id = req.params.id;
       const appointment = await AppointmentService.getAppointmentById(id, workspaceId);
       
@@ -73,7 +73,7 @@ appointmentRouter.post(
   validateRequest(createAppointmentSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const newAppointment = await AppointmentService.createAppointment(workspaceId, req.body);
 
       // Track audit event
@@ -103,7 +103,7 @@ appointmentRouter.put(
   validateRequest(updateAppointmentSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const id = req.params.id;
       const updatedAppointment = await AppointmentService.updateAppointment(id, workspaceId, req.body);
 
@@ -135,7 +135,7 @@ appointmentRouter.delete(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const id = req.params.id;
 
       const appointment = await AppointmentService.getAppointmentById(id, workspaceId);
@@ -174,7 +174,7 @@ servicesRouter.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const services = await AppointmentService.getServices(workspaceId);
       res.json(services);
     } catch (err) {
@@ -191,7 +191,7 @@ servicesRouter.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const id = req.params.id;
       const service = await AppointmentService.getServiceById(id, workspaceId);
       
@@ -215,7 +215,7 @@ servicesRouter.post(
   validateRequest(createServiceSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const newService = await AppointmentService.createService(workspaceId, req.body);
       res.status(201).json(newService);
     } catch (err: any) {
@@ -233,7 +233,7 @@ servicesRouter.put(
   validateRequest(updateServiceSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const id = req.params.id;
       const updatedService = await AppointmentService.updateService(id, workspaceId, req.body);
       res.json(updatedService);
@@ -251,7 +251,7 @@ servicesRouter.delete(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const id = req.params.id;
       await AppointmentService.deleteService(id, workspaceId);
       res.status(204).end();

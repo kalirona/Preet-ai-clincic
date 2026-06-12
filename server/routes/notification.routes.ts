@@ -27,7 +27,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const appointmentId = req.query.appointmentId as string | undefined;
       const status = req.query.status as NotificationStatus | undefined;
 
@@ -51,7 +51,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const id = req.params.id;
 
       const notification = await NotificationService.getNotificationById(id, workspaceId);
@@ -75,7 +75,7 @@ router.post(
   validateRequest(createNotificationSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const { appointmentId, clientId, type, channel, scheduledFor } = req.body;
 
       // Affirm appointment existence and multi-tenant mapping bounds safely
@@ -114,7 +114,7 @@ router.put(
   validateRequest(updateNotificationStatusSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const id = req.params.id;
       const { status, errorMessage, sentAt } = req.body;
 
@@ -144,7 +144,7 @@ router.delete(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const id = req.params.id;
 
       const notification = await NotificationService.getNotificationById(id, workspaceId);

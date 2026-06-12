@@ -25,7 +25,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const clientId = req.params.clientId;
 
       // 1. Verify client existence and strict matching inside client's active tenant boundary
@@ -52,7 +52,7 @@ router.post(
   validateRequest(createClientActivitySchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const clientId = req.params.clientId;
 
       // 1. Ensure the parent client target exists and belongs strictly to this workspace
@@ -86,7 +86,7 @@ router.delete(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const activityId = req.params.id;
 
       // Perform cross-tenant boundary verification and safely execute deletion in single step

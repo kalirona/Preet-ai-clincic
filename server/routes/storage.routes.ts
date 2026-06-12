@@ -23,7 +23,7 @@ router.get(
   requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const { clientId, appointmentId, category } = req.query;
 
       const docs = await DocumentService.getDocuments(workspaceId, {
@@ -48,7 +48,7 @@ router.post(
   upload.single("file"),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const { clientId, appointmentId, category, customName } = req.body;
       const file = req.file;
 
@@ -108,7 +108,7 @@ router.delete(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceId(req);
+      const workspaceId = await getWorkspaceId(req);
       const documentId = req.params.id;
 
       const doc = await DocumentService.getDocumentById(documentId, workspaceId);

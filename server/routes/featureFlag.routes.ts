@@ -7,7 +7,7 @@ import { ApiError } from "../types/errors";
 import { FeatureFlagService } from "../services/featureFlag.service";
 import { AuditLogService } from "../services/auditLog.service";
 
-import { getWorkspaceIdLenient } from "../utils/workspace";
+import { getWorkspaceId } from "../utils/workspace";
 
 const router = Router();
 
@@ -18,7 +18,7 @@ router.get(
   requireAuth as any,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceIdLenient(req);
+      const workspaceId = await getWorkspaceId(req);
       const flags = await FeatureFlagService.getFeatureFlags(workspaceId);
       res.json(flags);
     } catch (err) {
@@ -35,7 +35,7 @@ router.post(
   requireRole(["Owner", "Admin"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = getWorkspaceIdLenient(req);
+      const workspaceId = await getWorkspaceId(req);
       const { flagKey, isEnabled } = req.body;
 
       if (!flagKey) {
