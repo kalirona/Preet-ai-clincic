@@ -52,7 +52,8 @@ publicBookingRouter.get("/:slug", publicRateLimiter, async (req: Request, res: R
 
     let dbServices: any[] = [];
     try {
-      dbServices = await AppointmentService.getServices(workspace.id);
+      const result = await AppointmentService.getServices(workspace.id, { limit: 100 });
+      dbServices = result.data;
     } catch (dbErr) {
       console.warn("[PublicBooking] Supabase fetch omitted or failed, falling back to mock services:", dbErr);
     }

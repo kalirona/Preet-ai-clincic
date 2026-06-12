@@ -68,8 +68,10 @@ router.get(
       const format = (req.query.format as string || "csv").toLowerCase();
 
       // Fetch active records
-      const clients = await ClientService.getClients(workspaceId);
-      const appointments = await AppointmentService.getAppointments(workspaceId);
+      const clientsResult = await ClientService.getClients(workspaceId, { limit: 1000 });
+      const appointmentsResult = await AppointmentService.getAppointments(workspaceId, { limit: 1000 });
+      const clients = clientsResult.data;
+      const appointments = appointmentsResult.data;
       
       let dataToExport: any[] = [];
       let filename = `${type}_export_${Date.now()}`;
@@ -101,8 +103,9 @@ router.get(
         });
       } else if (type === "revenue") {
         // Retrieve services map
-        const services = await AppointmentService.getServices(workspaceId);
-        const servicePriceMap = new Map(services.map(s => [s.id, s.price || 250]));
+        const servicesResult = await AppointmentService.getServices(workspaceId, { limit: 500 });
+        const services = servicesResult.data;
+        const servicePriceMap = new Map(services.map(s => [s.id, (s.price as number) || 250]));
 
         dataToExport = appointments.map(a => {
           const clientName = clients.find(c => c.id === a.clientId);
@@ -114,7 +117,7 @@ router.get(
             "Client Partner": formattedClient,
             "Status": a.status,
             "Date Scheduled": a.startTime ? new Date(a.startTime).toLocaleDateString() : "N/A",
-            "Service Value": `$${price.toFixed(2)}`,
+            "Service Value": `$${Number(price).toFixed(2)}`,
             "Status Outcome": (a.status as any) === "Cancelled" ? "Refunded/Void" : "Accrued"
           };
         });
@@ -319,8 +322,10 @@ router.post(
       const userEmail = req.user?.email || "superadmin@preet.ai";
 
       // Gather active records matching the tenant boundary context limits
-      const clients = await ClientService.getClients(workspaceId);
-      const appointments = await AppointmentService.getAppointments(workspaceId);
+      const clientsResult = await ClientService.getClients(workspaceId, { limit: 1000 });
+      const appointmentsResult = await AppointmentService.getAppointments(workspaceId, { limit: 1000 });
+      const clients = clientsResult.data;
+      const appointments = appointmentsResult.data;
 
       const timestampStr = new Date().toISOString();
       const randomId = `SNAP-${new Date().toISOString().slice(0,10)}-${Math.floor(1000 + Math.random() * 9000)}`;

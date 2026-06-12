@@ -74,8 +74,11 @@ router.get(
     try {
       const workspaceId = req.integration.workspaceId;
       const searchVal = (req.query.search as string) || "";
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(200, parseInt(req.query.limit as string) || 50);
       
-      let clients = await ClientService.getClients(workspaceId);
+      let clientsResult = await ClientService.getClients(workspaceId, { page, limit });
+      let clients = clientsResult.data;
       if (searchVal) {
         const lowerSearch = searchVal.toLowerCase();
         clients = clients.filter(c => 
@@ -164,7 +167,8 @@ router.get(
   async (req: any, res: Response, next: NextFunction) => {
     try {
       const workspaceId = req.integration.workspaceId;
-      const appointments = await AppointmentService.getAppointments(workspaceId);
+      const appointmentsResult = await AppointmentService.getAppointments(workspaceId, { limit: 200 });
+      const appointments = appointmentsResult.data;
       
       res.json({
         success: true,

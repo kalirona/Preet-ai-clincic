@@ -3,10 +3,29 @@ import { Appointment } from "../types/appointment";
 import { getSupabaseServerClient } from "../middleware/requireAuth";
 import { WebhookService } from "./webhook.service";
 
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 /**
  * Service orchestrator for managing services and appointments with multi-tenant separation.
  */
 export class AppointmentService {
+  private static readonly DEFAULT_LIMIT = 50;
+  private static readonly MAX_LIMIT = 200;
   
   // --- Service Mappers ---
   private static mapToCamelService(row: any): Service {
@@ -61,24 +80,43 @@ export class AppointmentService {
   // ==========================================
 
   /**
-   * Retrieves all services configured for a specific workspace.
+   * Retrieves all services configured for a specific workspace with pagination.
    */
-  static async getServices(workspaceId: string): Promise<Service[]> {
+  static async getServices(
+    workspaceId: string, 
+    params: PaginationParams = {}
+  ): Promise<PaginatedResult<Service>> {
     try {
       const supabase = getSupabaseServerClient();
-      const { data, error } = await supabase
+      const page = Math.max(1, params.page || 1);
+      const limit = Math.min(params.limit || this.DEFAULT_LIMIT, this.MAX_LIMIT);
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+
+      let query = supabase
         .from("services")
-        .select("*")
+        .select("*", { count: "exact" })
         .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false });
+        .range(from, to);
+
+      const sortBy = params.sortBy || "created_at";
+      const sortOrder = params.sortOrder || "desc";
+      query = query.order(sortBy, { ascending: sortOrder === "asc" });
+
+      const { data, error, count } = await query;
 
       if (error) {
         console.error(`[AppointmentService] getServices DB Error:`, error);
         throw new Error("Failed to retrieve services from database.");
       }
 
-      if (!data) return [];
-      return data.map((item: any) => this.mapToCamelService(item));
+      const total = count || 0;
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        data: (data || []).map((item: any) => this.mapToCamelService(item)),
+        pagination: { page, limit, total, totalPages },
+      };
     } catch (err) {
       console.error(`[AppointmentService] Exception in getServices:`, err);
       throw err;
@@ -202,24 +240,43 @@ export class AppointmentService {
   // ==========================================
 
   /**
-   * Retrieves all appointments in a workspace.
+   * Retrieves all appointments in a workspace with pagination.
    */
-  static async getAppointments(workspaceId: string): Promise<Appointment[]> {
+  static async getAppointments(
+    workspaceId: string, 
+    params: PaginationParams = {}
+  ): Promise<PaginatedResult<Appointment>> {
     try {
       const supabase = getSupabaseServerClient();
-      const { data, error } = await supabase
+      const page = Math.max(1, params.page || 1);
+      const limit = Math.min(params.limit || this.DEFAULT_LIMIT, this.MAX_LIMIT);
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+
+      let query = supabase
         .from("appointments")
-        .select("*")
+        .select("*", { count: "exact" })
         .eq("workspace_id", workspaceId)
-        .order("start_time", { ascending: true });
+        .range(from, to);
+
+      const sortBy = params.sortBy || "start_time";
+      const sortOrder = params.sortOrder || "asc";
+      query = query.order(sortBy, { ascending: sortOrder === "asc" });
+
+      const { data, error, count } = await query;
 
       if (error) {
         console.error(`[AppointmentService] getAppointments DB Error:`, error);
         throw new Error("Failed to retrieve appointments list from database.");
       }
 
-      if (!data) return [];
-      return data.map((item: any) => this.mapToCamelAppointment(item));
+      const total = count || 0;
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        data: (data || []).map((item: any) => this.mapToCamelAppointment(item)),
+        pagination: { page, limit, total, totalPages },
+      };
     } catch (err) {
       console.error(`[AppointmentService] Exception in getAppointments:`, err);
       throw err;

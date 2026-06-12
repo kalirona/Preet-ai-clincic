@@ -2,11 +2,31 @@ import { Client } from "../types/client";
 import { getSupabaseServerClient } from "../middleware/requireAuth";
 import { WebhookService } from "./webhook.service";
 
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 /**
  * Service orchestrator for managing clients with strict multi-tenant workspace separation.
  * Inherits security from workspace context checks, filtering every query by workspaceId.
  */
 export class ClientService {
+  private static readonly DEFAULT_LIMIT = 50;
+  private static readonly MAX_LIMIT = 200;
+
   /**
    * Helper function to convert DB snake_case record to camelCase TS structure.
    */
@@ -41,30 +61,48 @@ export class ClientService {
   }
 
   /**
-   * Retrieves all clients mapped to a specific workspace.
-   * Scoped and filtered by workspaceId to secure organizational data bounds.
+   * Retrieves clients with pagination, scoped by workspaceId.
    */
-  static async getClients(workspaceId: string, includeDeleted = false): Promise<Client[]> {
+  static async getClients(
+    workspaceId: string, 
+    params: PaginationParams = {},
+    includeDeleted = false
+  ): Promise<PaginatedResult<Client>> {
     try {
       const supabase = getSupabaseServerClient();
+      const page = Math.max(1, params.page || 1);
+      const limit = Math.min(params.limit || this.DEFAULT_LIMIT, this.MAX_LIMIT);
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+
       let query = supabase
         .from("clients")
-        .select("*")
-        .eq("workspace_id", workspaceId);
+        .select("*", { count: "exact" })
+        .eq("workspace_id", workspaceId)
+        .range(from, to);
 
       if (!includeDeleted) {
         query = query.is("deleted_at", null);
       }
 
-      const { data, error } = await query.order("created_at", { ascending: false });
+      const sortBy = params.sortBy || "created_at";
+      const sortOrder = params.sortOrder || "desc";
+      query = query.order(sortBy, { ascending: sortOrder === "asc" });
+
+      const { data, error, count } = await query;
 
       if (error) {
         console.error(`[ClientService] getClients DB Error:`, error);
         throw new Error("Failed to retrieve client list from database.");
       }
 
-      if (!data) return [];
-      return data.map((item: any) => this.mapToCamel(item));
+      const total = count || 0;
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        data: (data || []).map((item: any) => this.mapToCamel(item)),
+        pagination: { page, limit, total, totalPages },
+      };
     } catch (err) {
       console.error(`[ClientService] Exception in getClients:`, err);
       throw err;

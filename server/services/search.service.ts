@@ -25,7 +25,8 @@ export class SearchService {
 
     // 1. SEARCH CLIENT DATA & CLIENT NOTES
     try {
-      const clients = await ClientService.getClients(workspaceId);
+      const clientsResult = await ClientService.getClients(workspaceId, { limit: 200 });
+      const clients = clientsResult.data;
       const matchedClients = clients.filter((c) => {
         return (
           c.firstName.toLowerCase().includes(searchTerm) ||

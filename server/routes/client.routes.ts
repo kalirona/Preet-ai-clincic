@@ -12,7 +12,7 @@ import { createClientSchema, updateClientSchema } from "../validators/client.val
 
 const router = Router();
 
-// GET /api/clients - Retrieves all clients within the workspace context
+// GET /api/clients - Retrieves all clients within the workspace context with pagination
 router.get(
   "/",
   clientRateLimiter,
@@ -22,8 +22,13 @@ router.get(
     try {
       const workspaceId = await getWorkspaceId(req);
       const includeDeleted = req.query.includeDeleted === "true";
-      const clients = await ClientService.getClients(workspaceId, includeDeleted);
-      res.json(clients);
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
+      const sortBy = (req.query.sortBy as string) || "created_at";
+      const sortOrder = (req.query.sortOrder as "asc" | "desc") || "desc";
+      
+      const result = await ClientService.getClients(workspaceId, { page, limit, sortBy, sortOrder }, includeDeleted);
+      res.json(result);
     } catch (err) {
       next(err);
     }

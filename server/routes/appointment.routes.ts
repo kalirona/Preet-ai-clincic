@@ -24,7 +24,7 @@ const appointmentRouter = Router();
  */
 import { getWorkspaceId } from "../utils/workspace";
 
-// GET /api/appointments - Retrieves all appointments in a tenant workspace
+// GET /api/appointments - Retrieves all appointments in a tenant workspace with pagination
 appointmentRouter.get(
   "/",
   clientRateLimiter,
@@ -33,8 +33,13 @@ appointmentRouter.get(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const workspaceId = await getWorkspaceId(req);
-      const appointments = await AppointmentService.getAppointments(workspaceId);
-      res.json(appointments);
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
+      const sortBy = (req.query.sortBy as string) || "start_time";
+      const sortOrder = (req.query.sortOrder as "asc" | "desc") || "asc";
+      
+      const result = await AppointmentService.getAppointments(workspaceId, { page, limit, sortBy, sortOrder });
+      res.json(result);
     } catch (err) {
       next(err);
     }
@@ -166,7 +171,7 @@ appointmentRouter.delete(
 // ==========================================
 const servicesRouter = Router();
 
-// GET /api/services - Retrieves all services in a tenant workspace
+// GET /api/services - Retrieves all services in a tenant workspace with pagination
 servicesRouter.get(
   "/",
   clientRateLimiter,
@@ -175,8 +180,13 @@ servicesRouter.get(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const workspaceId = await getWorkspaceId(req);
-      const services = await AppointmentService.getServices(workspaceId);
-      res.json(services);
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
+      const sortBy = (req.query.sortBy as string) || "created_at";
+      const sortOrder = (req.query.sortOrder as "asc" | "desc") || "desc";
+      
+      const result = await AppointmentService.getServices(workspaceId, { page, limit, sortBy, sortOrder });
+      res.json(result);
     } catch (err) {
       next(err);
     }
