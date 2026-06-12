@@ -7,6 +7,7 @@ import { ApiError } from "../types/errors";
 import { InboxService } from "../services/inbox.service";
 import { getWorkspaceId } from "../utils/workspace";
 import { sendMessageSchema, updateConversationSchema } from "../validators/agent.validator";
+import { broadcastToWorkspace } from "../services/websocket";
 
 const router = Router();
 
@@ -102,6 +103,9 @@ router.post(
       // Mark as read when agent responds
       await InboxService.markAsRead(req.params.id, workspaceId);
 
+      // Broadcast new message to workspace clients
+      broadcastToWorkspace(workspaceId, "new_message", { conversationId: req.params.id, message });
+
       res.status(201).json(message);
     } catch (err) {
       next(err);
@@ -120,6 +124,7 @@ router.put(
       const workspaceId = await getWorkspaceId(req);
       const conversation = await InboxService.updateConversation(req.params.id, workspaceId, req.body);
       if (!conversation) throw new ApiError(404, "Conversation not found.");
+      broadcastToWorkspace(workspaceId, "conversation_updated", { conversation });
       res.json(conversation);
     } catch (err) {
       next(err);
@@ -137,6 +142,7 @@ router.post(
       const workspaceId = await getWorkspaceId(req);
       const conversation = await InboxService.archiveConversation(req.params.id, workspaceId);
       if (!conversation) throw new ApiError(404, "Conversation not found.");
+      broadcastToWorkspace(workspaceId, "conversation_updated", { conversation });
       res.json(conversation);
     } catch (err) {
       next(err);
@@ -153,6 +159,7 @@ router.post(
     try {
       const workspaceId = await getWorkspaceId(req);
       await InboxService.markAsRead(req.params.id, workspaceId);
+      broadcastToWorkspace(workspaceId, "conversation_updated", { conversationId: req.params.id, status: "open" });
       res.json({ success: true });
     } catch (err) {
       next(err);

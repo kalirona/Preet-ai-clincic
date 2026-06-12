@@ -13,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { SystemPageLayout, PageHeader, PageContent } from '@/components/layout/SystemPageLayout';
 
+import { getAuthToken } from '@/lib/getAuthToken';
+
 interface Conversation {
   id: string;
   agentId?: string;
@@ -66,6 +68,58 @@ export default function Inbox() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // WebSocket for real-time updates
+  useEffect(() => {
+    let ws: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout>;
+
+    const connect = async () => {
+      const token = await getAuthToken();
+      if (!token) return;
+
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const url = `${protocol}//${window.location.host}/ws?token=${encodeURIComponent(token)}&workspaceId=${encodeURIComponent(workspaceId)}`;
+
+      try {
+        ws = new WebSocket(url);
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'new_message' && data.message) {
+              setMessages(prev => {
+                if (prev.some(m => m.id === data.message.id)) return prev;
+                return [...prev, data.message];
+              });
+              // Update conversation last message time
+              setConversations(prev => prev.map(c =>
+                c.id === data.conversationId
+                  ? { ...c, lastMessageAt: data.message.createdAt, status: 'unread', unreadCount: (c.unreadCount || 0) + 1 }
+                  : c
+              ));
+            }
+            if (data.type === 'conversation_updated' && data.conversation) {
+              setConversations(prev => prev.map(c =>
+                c.id === data.conversation.id ? data.conversation : c
+              ));
+            }
+          } catch {}
+        };
+
+        ws.onclose = () => {
+          // Reconnect after 3s
+          reconnectTimer = setTimeout(connect, 3000);
+        };
+      } catch {}
+    };
+
+    connect();
+    return () => {
+      if (ws) ws.close();
+      clearTimeout(reconnectTimer);
+    };
+  }, [workspaceId]);
 
   const fetchConversations = async () => {
     try {

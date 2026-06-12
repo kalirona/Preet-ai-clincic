@@ -37,6 +37,9 @@ import inboxRouter from "./server/routes/inbox.routes";
 import widgetRouter from "./server/routes/widget.routes";
 import formRouter from "./server/routes/form.routes";
 
+// WebSocket for real-time Inbox
+import { initializeWebSocket } from "./server/services/websocket";
+
 // Import Background Queue & Jobs
 import { globalQueue } from "./server/queues/queue";
 import { handleAIJob } from "./server/jobs/ai.job";
@@ -223,6 +226,10 @@ async function startServer() {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
+
+  // Initialize WebSocket for real-time inbox
+  initializeWebSocket(server);
+  console.log("[WebSocket] Server initialized on /ws");
 
   // M8: Graceful shutdown
   const shutdown = (signal: string) => {
