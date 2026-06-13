@@ -37,33 +37,15 @@ interface AppointmentType {
 }
 
 export function Dashboard() {
-  // Store state locally to maintain high interactive fidelity across clicks
   const [appointments, setAppointments] = useState<AppointmentType[]>(() => {
-    const saved = localStorage.getItem('preet_dashboard_appts');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return [
-      { id: '1', clientName: 'Alex Rivera', timeSlot: '09:30 AM', service: 'Web Design Kickoff', status: 'Checked-In' },
-      { id: '2', clientName: 'Sarah Chen', timeSlot: '11:00 AM', service: 'SEO Architecture Consultation', status: 'Checked-In' },
-      { id: '3', clientName: 'Marcus Thorne', timeSlot: '02:15 PM', service: 'SaaS Contract Sync', status: 'Scheduled' },
-      { id: '4', clientName: 'David Kim', timeSlot: '04:30 PM', service: 'API Support Review', status: 'Scheduled' },
-    ];
+    try {
+      const saved = localStorage.getItem('preet_dashboard_appts');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
   });
 
-  const [leadsCount, setLeadsCount] = useState<number>(() => {
-    const saved = localStorage.getItem('preet_dashboard_leads');
-    return saved ? parseInt(saved, 10) : 5;
-  });
-
-  const [revenue, setRevenue] = useState<number>(() => {
-    const saved = localStorage.getItem('preet_dashboard_revenue');
-    return saved ? parseInt(saved, 10) : 1450;
-  });
+  const [leadsCount, setLeadsCount] = useState<number>(0);
+  const [revenue, setRevenue] = useState<number>(0);
 
   // Modal / overlay states for Interactive Quick Actions
   const [isAddClientOpen, setIsAddClientOpen] = useState(false);
@@ -81,6 +63,7 @@ export function Dashboard() {
 
   // Real API metrics
   const workspaceId = localStorage.getItem('activeWorkspaceId') || '1';
+  const [isLoading, setIsLoading] = useState(true);
   const [apiMetrics, setApiMetrics] = useState({
     totalClients: 0,
     newClientsThisMonth: 0,
@@ -97,11 +80,24 @@ export function Dashboard() {
       axios.get('/api/dashboard', { headers }),
       axios.get('/api/inbox/stats', { headers }),
       axios.get('/api/forms/stats', { headers }),
+      axios.get('/api/clients', { headers, params: { limit: 200 } }),
       axios.get('/api/appointments', { headers, params: { limit: 10 } }),
-    ]).then(([dashRes, inboxRes, formRes, apptsRes]) => {
-      if (dashRes.status === 'fulfilled') setApiMetrics(dashRes.value.data);
+    ]).then((results) => {
+      const [dashRes, inboxRes, formRes, clsRes, apptsRes] = results;
+      if (dashRes.status === 'fulfilled') {
+        const m = dashRes.value.data;
+        setApiMetrics(m);
+        if (m.totalClients) setLeadsCount(m.totalClients);
+        if (m.estimatedRevenueMonth) setRevenue(m.estimatedRevenueMonth);
+      }
       if (inboxRes.status === 'fulfilled') setInboxStats(inboxRes.value.data);
       if (formRes.status === 'fulfilled') setFormStats(formRes.value.data);
+      if (clsRes.status === 'fulfilled') {
+        const clients = clsRes.value.data?.data || clsRes.value.data || [];
+        if (clients.length > 0) {
+          setLeadsCount(prev => prev || clients.length);
+        }
+      }
       if (apptsRes.status === 'fulfilled') {
         const appts = apptsRes.value.data?.data || apptsRes.value.data || [];
         if (appts.length > 0) {
@@ -114,20 +110,12 @@ export function Dashboard() {
           })));
         }
       }
-    });
+    }).finally(() => setIsLoading(false));
   }, [workspaceId]);
 
   useEffect(() => {
     localStorage.setItem('preet_dashboard_appts', JSON.stringify(appointments));
   }, [appointments]);
-
-  useEffect(() => {
-    localStorage.setItem('preet_dashboard_leads', String(leadsCount));
-  }, [leadsCount]);
-
-  useEffect(() => {
-    localStorage.setItem('preet_dashboard_revenue', String(revenue));
-  }, [revenue]);
 
   // Derived metrics
   const totalApptsCount = useMemo(() => appointments.length, [appointments]);
@@ -222,6 +210,13 @@ export function Dashboard() {
   return (
     <div className="space-y-7 pb-12 animate-fade-in select-none">
       
+      {isLoading && (
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-indigo-50 border border-indigo-100 text-xs font-bold text-indigo-700">
+          <div className="w-4 h-4 rounded-full border-2 border-indigo-200 border-t-indigo-600 animate-spin" />
+          Loading dashboard data from workspace...
+        </div>
+      )}
+
       {/* Workspace Banner */}
       <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200 shadow-3xs flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
         <div className="absolute right-0 top-0 h-40 w-40 bg-gradient-to-br from-indigo-50 to-blue-50/50 rounded-full blur-2xl opacity-75 -z-10 pointer-events-none" />
