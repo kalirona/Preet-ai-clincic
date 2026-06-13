@@ -149,6 +149,40 @@ export function Layout() {
     return () => clearInterval(interval);
   }, [whiteLabelName, whiteLabelLogo, whiteLabelColor]);
 
+  // First-login workspace auto-setup
+  useEffect(() => {
+    const run = async () => {
+      try {
+        const res = await fetch("/api/setup/status");
+        const data = await res.json();
+        if (data.needsSetup) {
+          const createRes = await fetch("/api/setup/workspace", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          });
+          if (createRes.ok) {
+            const ws = await createRes.json();
+            setActiveWorkspace(p => ({ ...p, id: ws.workspace.id, name: ws.workspace.name }));
+            localStorage.setItem("activeWorkspaceId", ws.workspace.id);
+          } else {
+            // Fallback: set workspaceId from localStorage
+            const fallback = localStorage.getItem("activeWorkspaceId");
+            if (fallback) setActiveWorkspace(p => ({ ...p, id: fallback }));
+          }
+        } else if (data.workspaceId) {
+          setActiveWorkspace(p => ({ ...p, id: data.workspaceId }));
+          localStorage.setItem("activeWorkspaceId", data.workspaceId);
+        }
+      } catch {
+        // Silently fail — use localStorage fallback
+        const id = localStorage.getItem("activeWorkspaceId") || "1";
+        setActiveWorkspace(p => ({ ...p, id }));
+      }
+    };
+    run();
+  }, []);
+
   const [activeWorkspace, setActiveWorkspace] = useState<Workspace>(() => {
     const active = workspaces[0];
     return {

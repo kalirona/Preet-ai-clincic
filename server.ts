@@ -36,6 +36,7 @@ import agentRouter from "./server/routes/agent.routes";
 import inboxRouter from "./server/routes/inbox.routes";
 import widgetRouter from "./server/routes/widget.routes";
 import formRouter from "./server/routes/form.routes";
+import setupRouter from "./server/routes/setup.routes";
 
 // WebSocket for real-time Inbox
 import { initializeWebSocket } from "./server/services/websocket";
@@ -185,6 +186,7 @@ app.use("/api/agents", agentRouter);
 app.use("/api/inbox", inboxRouter);
 app.use("/api/widget", widgetRouter);
 app.use("/api/forms", formRouter);
+app.use("/api/setup", setupRouter);
 
 // C4: Protect uploaded files with auth middleware
 app.use("/uploads", requireAuth as any, express.static(path.join(process.cwd(), "uploads")));

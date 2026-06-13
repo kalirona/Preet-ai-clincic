@@ -3,7 +3,6 @@ import { getSupabaseServerClient } from "../middleware/requireAuth";
 
 /**
  * Service to manage SaaS workspaces and database membership security.
- * Function signatures are strictly typed ready for live SQL connection.
  */
 export class WorkspaceService {
   /**
@@ -103,6 +102,53 @@ export class WorkspaceService {
     } catch (err) {
       console.error(`[WorkspaceService] Exception in getUserWorkspaces:`, err);
       return [];
+    }
+  }
+
+  /**
+   * Creates a new workspace with auto-generated slug.
+   */
+  static async createWorkspace(name: string, tenantType: string = "business"): Promise<Workspace | null> {
+    try {
+      const supabase = getSupabaseServerClient();
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "workspace";
+
+      const { data, error } = await supabase
+        .from("workspaces")
+        .insert({ name, tenant_type: tenantType, slug, is_active: true })
+        .select()
+        .single();
+
+      if (error || !data) {
+        console.error(`[WorkspaceService] createWorkspace Error:`, error);
+        return null;
+      }
+
+      return { id: data.id, name: data.name, tenantType: data.tenant_type, createdAt: data.created_at };
+    } catch (err) {
+      console.error(`[WorkspaceService] Exception in createWorkspace:`, err);
+      return null;
+    }
+  }
+
+  /**
+   * Adds a user as a member of a workspace.
+   */
+  static async addMember(workspaceId: string, userId: string, role: string = "Owner"): Promise<boolean> {
+    try {
+      const supabase = getSupabaseServerClient();
+      const { error } = await supabase
+        .from("workspace_members")
+        .insert({ workspace_id: workspaceId, user_id: userId, role });
+
+      if (error) {
+        console.error(`[WorkspaceService] addMember Error:`, error);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error(`[WorkspaceService] Exception in addMember:`, err);
+      return false;
     }
   }
 }
