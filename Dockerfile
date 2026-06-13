@@ -11,6 +11,7 @@ RUN apk add --no-cache curl
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
+COPY --from=builder /app/server/migrations/migrate.sql ./server/migrations/migrate.sql
 ENV NODE_ENV=production
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
