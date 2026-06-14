@@ -12,3 +12,4 @@ docker-compose.yml
 .idea
 coverage
 *.tsbuildinfo
+uploads

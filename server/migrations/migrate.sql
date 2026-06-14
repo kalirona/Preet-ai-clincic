@@ -9,6 +9,9 @@ CREATE TABLE IF NOT EXISTS workspaces (
   name VARCHAR(255) NOT NULL,
   tenant_type VARCHAR(50) NOT NULL,
   slug VARCHAR(255) UNIQUE,
+  description TEXT,
+  contact_email TEXT,
+  contact_phone TEXT,
   is_active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -303,3 +306,46 @@ CREATE INDEX IF NOT EXISTS idx_form_responses_workspace_id ON form_responses(wor
 CREATE INDEX IF NOT EXISTS idx_form_responses_form_id ON form_responses(form_id);
 CREATE INDEX IF NOT EXISTS idx_form_responses_status ON form_responses(workspace_id, status);
 CREATE INDEX IF NOT EXISTS idx_form_responses_created_at ON form_responses(workspace_id, created_at DESC);
+
+-- 0013: Workspace API Keys
+CREATE TABLE IF NOT EXISTS workspace_api_keys (
+  id_pk VARCHAR(100) PRIMARY KEY,
+  workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  prefix VARCHAR(20) NOT NULL,
+  secret_key TEXT NOT NULL,
+  scopes JSONB NOT NULL DEFAULT '[]'::jsonb,
+  expires_at TIMESTAMPTZ NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  last_used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_workspace_api_keys_workspace ON workspace_api_keys(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_workspace_api_keys_secret ON workspace_api_keys(secret_key);
+
+-- 0014: Webhook Subscriptions
+CREATE TABLE IF NOT EXISTS webhook_subscriptions (
+  id_pk VARCHAR(100) PRIMARY KEY,
+  workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  url TEXT NOT NULL,
+  events JSONB NOT NULL DEFAULT '["client.created"]'::jsonb,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_webhook_subscriptions_workspace ON webhook_subscriptions(workspace_id);
+
+-- 0015: Feature Flags
+CREATE TABLE IF NOT EXISTS feature_flags (
+  id SERIAL PRIMARY KEY,
+  workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  flag_key VARCHAR(100) NOT NULL,
+  flag_name VARCHAR(255) NOT NULL,
+  description TEXT DEFAULT '',
+  is_enabled BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT unique_workspace_flag UNIQUE (workspace_id, flag_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_feature_flags_workspace ON feature_flags(workspace_id);
