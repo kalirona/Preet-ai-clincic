@@ -101,7 +101,7 @@ export class DashboardService {
       let estimatedRevenueMonth = 0;
       for (const appt of revenueRes.data || []) {
         if (!appt.start_time) continue;
-        const servicePrice = appt.service_id ? (servicesMap.get(appt.service_id) || 0) : 0;
+        const servicePrice = appt.service_id ? (servicesMap.get(appt.service_id) || 0) : 150;
         estimatedRevenueMonth += servicePrice;
       }
 

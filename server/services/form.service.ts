@@ -1,15 +1,17 @@
 import { getSupabaseServerClient } from "../middleware/requireAuth";
 import { FormBuilder, FormResponse, FormField, FormSettings } from "../types/form";
 
-const supabase = getSupabaseServerClient();
-
 export class FormService {
+  // Use lazy getter instead of module-level singleton
+  private static getClient() {
+    return getSupabaseServerClient();
+  }
   // ============================================
   // FORM BUILDERS
   // ============================================
 
   static async getAll(workspaceId: string): Promise<FormBuilder[]> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("form_builders")
       .select("*")
       .eq("workspace_id", workspaceId)
@@ -20,7 +22,7 @@ export class FormService {
   }
 
   static async getById(id: string, workspaceId: string): Promise<FormBuilder | null> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("form_builders")
       .select("*")
       .eq("id", id)
@@ -32,7 +34,7 @@ export class FormService {
   }
 
   static async create(workspaceId: string, payload: Partial<FormBuilder>): Promise<FormBuilder> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("form_builders")
       .insert({
         workspace_id: workspaceId,
@@ -63,7 +65,7 @@ export class FormService {
     if (payload.brandColor !== undefined) updates.brand_color = payload.brandColor;
     if (payload.isActive !== undefined) updates.is_active = payload.isActive;
 
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("form_builders")
       .update(updates)
       .eq("id", id)
@@ -76,7 +78,7 @@ export class FormService {
   }
 
   static async delete(id: string, workspaceId: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await this.getClient()
       .from("form_builders")
       .delete()
       .eq("id", id)
@@ -93,7 +95,7 @@ export class FormService {
     workspaceId: string,
     filters?: { formId?: string; status?: string; search?: string }
   ): Promise<FormResponse[]> {
-    let query = supabase
+    let query = this.getClient()
       .from("form_responses")
       .select("*")
       .eq("workspace_id", workspaceId);
@@ -107,7 +109,7 @@ export class FormService {
   }
 
   static async getResponseById(id: string, workspaceId: string): Promise<FormResponse | null> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("form_responses")
       .select("*")
       .eq("id", id)
@@ -119,7 +121,7 @@ export class FormService {
   }
 
   static async updateResponse(id: string, workspaceId: string, payload: { status?: string }): Promise<FormResponse | null> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("form_responses")
       .update({ status: payload.status })
       .eq("id", id)
@@ -132,7 +134,7 @@ export class FormService {
   }
 
   static async deleteResponse(id: string, workspaceId: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await this.getClient()
       .from("form_responses")
       .delete()
       .eq("id", id)
@@ -148,7 +150,7 @@ export class FormService {
     converted: number;
     archived: number;
   }> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("form_responses")
       .select("status")
       .eq("workspace_id", workspaceId);
@@ -178,7 +180,7 @@ export class FormService {
     settings: FormSettings;
     brandColor: string;
   } | null> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("form_builders")
       .select("id, name, description, fields, settings, brand_color, is_active")
       .eq("id", formId)
@@ -207,7 +209,7 @@ export class FormService {
     if (!form) throw new Error("Form not found or inactive");
 
     // Get workspace from form
-    const { data: formRow } = await supabase
+    const { data: formRow } = await this.getClient()
       .from("form_builders")
       .select("workspace_id")
       .eq("id", formId)
@@ -217,7 +219,7 @@ export class FormService {
     const workspaceId = formRow.workspace_id;
 
     // Create the form response
-    const { data: responseRow, error: responseError } = await supabase
+    const { data: responseRow, error: responseError } = await this.getClient()
       .from("form_responses")
       .insert({
         workspace_id: workspaceId,
@@ -237,7 +239,7 @@ export class FormService {
 
     // Auto-create conversation if enabled
     if (form.settings.createConversation) {
-      const { data: conv } = await supabase
+      const { data: conv } = await this.getClient()
         .from("conversations")
         .insert({
           workspace_id: workspaceId,
@@ -259,13 +261,13 @@ export class FormService {
         conversationId = conv.id;
 
         // Link response to conversation
-        await supabase
+        await this.getClient()
           .from("form_responses")
           .update({ conversation_id: conv.id })
           .eq("id", responseRow.id);
 
         // Add system message about form submission
-        await supabase
+        await this.getClient()
           .from("messages")
           .insert({
             conversation_id: conv.id,
@@ -287,7 +289,7 @@ export class FormService {
       // Check if client already exists
       let existingClient: any = null;
       if (email) {
-        const { data } = await supabase
+        const { data } = await this.getClient()
           .from("clients")
           .select("id")
           .eq("workspace_id", workspaceId)
@@ -299,7 +301,7 @@ export class FormService {
       if (existingClient) {
         clientId = existingClient.id;
         // Link response to existing client
-        await supabase
+        await this.getClient()
           .from("form_responses")
           .update({ client_id: clientId })
           .eq("id", responseRow.id);
@@ -310,7 +312,7 @@ export class FormService {
         }
       } else {
         // Create new client lead
-        const { data: newClient } = await supabase
+        const { data: newClient } = await this.getClient()
           .from("clients")
           .insert({
             workspace_id: workspaceId,
@@ -328,13 +330,13 @@ export class FormService {
           clientId = newClient.id;
 
           // Link response to client
-          await supabase
+          await this.getClient()
             .from("form_responses")
             .update({ client_id: clientId })
             .eq("id", responseRow.id);
 
           // Add client activity
-          await supabase
+          await this.getClient()
             .from("client_activities")
             .insert({
               workspace_id: workspaceId,

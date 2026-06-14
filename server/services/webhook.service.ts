@@ -86,17 +86,8 @@ export interface WebhookSubscription {
   createdAt: string;
 }
 
-// In-Memory vault for zero-downtime operation
-let inMemorySubscriptions: WebhookSubscription[] = [
-  {
-    id: "sub_1",
-    workspaceId: "1",
-    url: "https://api.zapier.com/hooks/catch/example",
-    events: ["client.created", "appointment.created", "payment.completed"],
-    isActive: true,
-    createdAt: new Date().toISOString()
-  }
-];
+// In-Memory vault - empty by default (no hardcoded workspace data)
+let inMemorySubscriptions: WebhookSubscription[] = [];
 
 export class WebhookService {
   static async getSubscriptions(workspaceId: string): Promise<WebhookSubscription[]> {

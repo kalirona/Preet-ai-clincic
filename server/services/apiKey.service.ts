@@ -19,22 +19,8 @@ function hashApiKey(key: string): string {
   return crypto.createHash("sha256").update(key).digest("hex");
 }
 
-// In-Memory fallback cache to support seamless preview operations
-let inMemoryApiKeys: ApiKey[] = [
-  {
-    id: "key_1",
-    workspaceId: "1",
-    name: "Zapier Automated CRM Lead Capture",
-    prefix: "pr_live_",
-    secretKey: "pr_live_zapier_workspace_token_sec_key_demo_01928",
-    keyHash: hashApiKey("pr_live_zapier_workspace_token_sec_key_demo_01928"),
-    scopes: ["clients:read", "clients:write", "appointments:read"],
-    expiresAt: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(),
-    isActive: true,
-    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    lastUsedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
-  }
-];
+// In-Memory fallback - empty by default (no hardcoded secrets)
+let inMemoryApiKeys: ApiKey[] = [];
 
 export class ApiKeyService {
   static async getApiKeys(workspaceId: string): Promise<ApiKey[]> {

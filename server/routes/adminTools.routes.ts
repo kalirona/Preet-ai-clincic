@@ -13,9 +13,9 @@ import { getWorkspaceId } from "../utils/workspace";
 const router = Router();
 
 // In-Memory simulated backup storage for snapshot catalogs
-// Persistent within the container runtime to provide immediate restore feedback
 interface BackupSnapshot {
   id: string;
+  workspaceId: string;
   version: string;
   timestamp: string;
   creator: string;
@@ -30,26 +30,7 @@ interface BackupSnapshot {
   }
 }
 
-let snapshotVault: BackupSnapshot[] = [
-  {
-    id: "SNAP-2026-06-01-0800",
-    version: "v2.1",
-    timestamp: "2026-06-01T08:00:00.000Z",
-    creator: "preetkalirona@gmail.com",
-    sizeKb: 24.8,
-    recordsCount: { clients: 4, appointments: 8 },
-    data: { clients: [], appointments: [] }
-  },
-  {
-    id: "SNAP-2026-06-08-1200",
-    version: "v2.2",
-    timestamp: "2026-06-08T12:00:00.000Z",
-    creator: "preetkalirona@gmail.com",
-    sizeKb: 36.2,
-    recordsCount: { clients: 5, appointments: 12 },
-    data: { clients: [], appointments: [] }
-  }
-];
+let snapshotVault: BackupSnapshot[] = [];
 
 // ==========================================
 // PHASE 26: EXPORT CENTER ENDPOINTS
@@ -332,6 +313,7 @@ router.post(
 
       const newSnapshot: BackupSnapshot = {
         id: randomId,
+        workspaceId,
         version: "v3.0",
         timestamp: timestampStr,
         creator: userEmail,
@@ -383,7 +365,7 @@ router.post(
         throw new ApiError(400, "Snapshot ID token identifier is required.");
       }
 
-      const targetSnap = snapshotVault.find(s => s.id === snapshotId);
+      const targetSnap = snapshotVault.find(s => s.id === snapshotId && s.workspaceId === workspaceId);
       if (!targetSnap) {
         throw new ApiError(404, `Snapshot backup reference '${snapshotId}' is expired or unreachable.`);
       }

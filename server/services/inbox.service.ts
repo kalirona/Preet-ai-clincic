@@ -1,9 +1,11 @@
 import { getSupabaseServerClient } from "../middleware/requireAuth";
 import { Conversation, Message, ConversationStatus, ConversationSource } from "../types/conversation";
 
-const supabase = getSupabaseServerClient();
-
 export class InboxService {
+  // Use lazy getter instead of module-level singleton to avoid init before env vars load
+  private static getClient() {
+    return getSupabaseServerClient();
+  }
   // ============================================
   // CONVERSATIONS
   // ============================================
@@ -17,7 +19,7 @@ export class InboxService {
       agentId?: string;
     }
   ): Promise<Conversation[]> {
-    let query = supabase
+    let query = this.getClient()
       .from("conversations")
       .select("*")
       .eq("workspace_id", workspaceId);
@@ -41,7 +43,7 @@ export class InboxService {
   }
 
   static async getConversationById(id: string, workspaceId: string): Promise<Conversation | null> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("conversations")
       .select("*")
       .eq("id", id)
@@ -62,7 +64,7 @@ export class InboxService {
     source?: ConversationSource;
     metadata?: Record<string, any>;
   }): Promise<Conversation> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("conversations")
       .insert({
         workspace_id: workspaceId,
@@ -94,7 +96,7 @@ export class InboxService {
     if (payload.assignedTo !== undefined) updates.assigned_to = payload.assignedTo;
     if (payload.tags !== undefined) updates.tags = JSON.stringify(payload.tags);
 
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("conversations")
       .update(updates)
       .eq("id", id)
@@ -116,7 +118,7 @@ export class InboxService {
     unread: number;
     archived: number;
   }> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("conversations")
       .select("status")
       .eq("workspace_id", workspaceId);
@@ -138,7 +140,7 @@ export class InboxService {
   // ============================================
 
   static async getMessages(conversationId: string, workspaceId: string): Promise<Message[]> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("messages")
       .select("*")
       .eq("conversation_id", conversationId)
@@ -156,7 +158,7 @@ export class InboxService {
     messageType?: string;
     metadata?: Record<string, any>;
   }): Promise<Message> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("messages")
       .insert({
         conversation_id: conversationId,
@@ -173,7 +175,7 @@ export class InboxService {
     if (error) throw error;
 
     // Update conversation last_message_at and unread count
-    await supabase
+    await this.getClient()
       .from("conversations")
       .update({
         last_message_at: new Date().toISOString(),
@@ -187,7 +189,7 @@ export class InboxService {
   }
 
   static async markAsRead(conversationId: string, workspaceId: string): Promise<void> {
-    await supabase
+    await this.getClient()
       .from("conversations")
       .update({ unread_count: 0, status: "open", updated_at: new Date().toISOString() })
       .eq("id", conversationId)
@@ -206,7 +208,7 @@ export class InboxService {
     visitorUserAgent?: string;
   }): Promise<{ conversation: Conversation; welcomeMessage: string }> {
     // Get agent info
-    const { data: agent, error: agentError } = await supabase
+    const { data: agent, error: agentError } = await this.getClient()
       .from("ai_agents")
       .select("id, workspace_id, welcome_message, is_active")
       .eq("id", agentId)
@@ -235,7 +237,7 @@ export class InboxService {
 
   static async widgetSendMessage(conversationId: string, content: string, senderType: 'visitor' | 'ai' = 'visitor'): Promise<Message> {
     // Get workspace from conversation
-    const { data: conv } = await supabase
+    const { data: conv } = await this.getClient()
       .from("conversations")
       .select("workspace_id")
       .eq("id", conversationId)
@@ -251,7 +253,7 @@ export class InboxService {
   }
 
   static async widgetGetMessages(conversationId: string): Promise<Message[]> {
-    const { data: conv } = await supabase
+    const { data: conv } = await this.getClient()
       .from("conversations")
       .select("workspace_id")
       .eq("id", conversationId)

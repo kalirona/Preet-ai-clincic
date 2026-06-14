@@ -349,3 +349,58 @@ CREATE TABLE IF NOT EXISTS feature_flags (
 );
 
 CREATE INDEX IF NOT EXISTS idx_feature_flags_workspace ON feature_flags(workspace_id);
+
+-- ==========================================================
+-- ROW LEVEL SECURITY POLICIES
+-- Enables RLS on all tables so the anon key cannot bypass
+-- application-layer workspace filtering.
+-- ==========================================================
+
+ALTER TABLE workspaces ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workspace_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE client_activities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE email_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE automations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE automation_steps ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_agents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_knowledge_files ENABLE ROW LEVEL SECURITY;
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE form_builders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE form_responses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workspace_api_keys ENABLE ROW LEVEL SECURITY;
+ALTER TABLE webhook_subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE feature_flags ENABLE ROW LEVEL SECURITY;
+
+-- Service-role bypasses RLS, so these policies only apply to anon/authenticated keys.
+-- The anon key should have NO access (block all).
+-- The service-role key bypasses RLS entirely, so these act as a safety net.
+
+-- Block all anon access to every table
+CREATE POLICY "Block anon access" ON workspaces FOR ALL USING (false) WITH CHECK (false);
+CREATE POLICY "Block anon access" ON workspace_members FOR ALL USING (false) WITH CHECK (false);
+CREATE POLICY "Block anon access" ON clients FOR ALL USING (false) WITH CHECK (false);
+CREATE POLICY "Block anon access" ON services FOR ALL USING (false) WITH CHECK (false);
+CREATE POLICY "Block anon access" ON client_activities FOR ALL USING (false) WITH CHECK (false);
+CREATE POLICY "Block anon access" ON appointments FOR ALL USING (false) WITH CHECK (false);
+CREATE POLICY "Block anon access" ON notifications FOR ALL USING (false) WITH CHECK (false);
+CREATE POLICY "Block anon access" ON email_templates FOR ALL USING (false) WITH CHECK (false);
+CREATE POLICY "Block anon access" ON automations FOR ALL USING (false) WITH CHECK (false);
+CREATE POLICY "Block anon access" ON automation_steps FOR ALL USING (false) WITH CHECK (false);
+CREATE POLICY "Block anon access" ON audit_logs FOR ALL USING (false) WITH CHECK (false);
+CREATE POLICY "Block anon access" ON documents FOR ALL USING (false) WITH CHECK (false);
+CREATE POLICY "Block anon access" ON ai_agents FOR ALL USING (false) WITH CHECK (false);
+CREATE POLICY "Block anon access" ON agent_knowledge_files FOR ALL USING (false) WITH CHECK (false);
+CREATE POLICY "Block anon access" ON conversations FOR ALL USING (false) WITH CHECK (false);
+CREATE POLICY "Block anon access" ON messages FOR ALL USING (false) WITH CHECK (false);
+CREATE POLICY "Block anon access" ON form_builders FOR ALL USING (false) WITH CHECK (false);
+CREATE POLICY "Block anon access" ON form_responses FOR ALL USING (false) WITH CHECK (false);
+CREATE POLICY "Block anon access" ON workspace_api_keys FOR ALL USING (false) WITH CHECK (false);
+CREATE POLICY "Block anon access" ON webhook_subscriptions FOR ALL USING (false) WITH CHECK (false);
+CREATE POLICY "Block anon access" ON feature_flags FOR ALL USING (false) WITH CHECK (false);

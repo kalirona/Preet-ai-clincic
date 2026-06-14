@@ -1,4 +1,3 @@
-import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
 import path from "path";
 import * as dotenv from "dotenv";
@@ -8,16 +7,11 @@ const MIGRATIONS_DIR = path.dirname(new URL(import.meta.url).pathname);
 
 async function migrate() {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-  if (!supabaseUrl || !supabaseKey) {
-    console.error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set");
+  if (!supabaseUrl) {
+    console.error("SUPABASE_URL must be set");
     process.exit(1);
   }
-
-  const supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
 
   // Get ordered migration files
   const files = fs
@@ -30,39 +24,22 @@ async function migrate() {
     return;
   }
 
-  console.log(`Found ${files.length} migration files to apply...`);
-
+  console.log(`Found ${files.length} migration file(s):`);
   for (const file of files) {
-    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), "utf-8");
-    console.log(`Applying: ${file}...`);
-
-    // Execute via Supabase REST API raw query
-    const { error } = await supabase.rpc("exec_sql", { query: sql });
-
-    if (error) {
-      // exec_sql might not exist - try direct SQL query instead
-      // Fallback: use the from() method with raw sql
-      console.warn(`  ⚠ RPC not available, trying direct query for ${file}...`);
-      // Split by semicolons and execute each statement
-      const statements = sql
-        .split(";")
-        .map((s) => s.trim())
-        .filter((s) => s && !s.startsWith("--"));
-
-      for (const stmt of statements) {
-        const { error: stmtError } = await supabase.from("_migrations").select("*").limit(0);
-        // Silently skip - we can't execute raw SQL via the Supabase JS client
-        // without the exec_sql RPC function
-        if (stmtError) break;
-      }
-    }
+    console.log(`  - ${file}`);
   }
 
-  console.log("\nMigrations complete!");
-  console.log("\nNOTE: If tables were not created automatically, please run the migrations manually:");
-  console.log("1. Open your Supabase Studio SQL Editor");
-  console.log("2. Copy and paste the contents of server/migrations/ files in order");
-  console.log("3. Execute each one sequentially");
+  console.log("\n⚠️  The Supabase JS client cannot execute raw DDL statements.");
+  console.log("   To apply migrations, follow these steps:\n");
+  console.log("   1. Open Supabase Studio SQL Editor");
+  console.log("   2. Copy the contents of each .sql file in order:");
+  for (const file of files) {
+    console.log(`      → ${file}`);
+  }
+  console.log("   3. Paste into SQL Editor and click 'Run'");
+  console.log("   4. Verify tables appear in the Table Editor\n");
+  console.log("Alternatively, use the Supabase CLI:");
+  console.log("  npx supabase db push");
 }
 
 migrate().catch(console.error);

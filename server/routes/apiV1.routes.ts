@@ -244,6 +244,7 @@ router.post(
 // POST /api/v1/payments/complete - External webhook ingestions for completed payments (Stripe/PayPal/Credit Cards)
 router.post(
   "/payments/complete",
+  requireIntegrationScope("payments:write"),
   async (req: any, res: Response, next: NextFunction) => {
     try {
       const workspaceId = req.integration.workspaceId;

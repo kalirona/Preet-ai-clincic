@@ -19,6 +19,11 @@ interface SearchParams {
 }
 
 export class SearchService {
+  // Sanitize user input for ilike patterns - escape %, _, and backslash
+  private static sanitizeLikeInput(input: string): string {
+    return input.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+  }
+
   static async searchAll(params: SearchParams): Promise<SearchResultItem[]> {
     const { workspaceId, q, supabase: optionalClient } = params;
     const searchTerm = (q || "").trim();
@@ -26,6 +31,7 @@ export class SearchService {
 
     const client = optionalClient || getSupabaseServerClient();
     const results: SearchResultItem[] = [];
+    const safeSearch = this.sanitizeLikeInput(searchTerm);
 
     // 1. SEARCH CLIENTS (first_name, last_name, email, phone, tag)
     try {
@@ -35,7 +41,7 @@ export class SearchService {
         .eq("workspace_id", workspaceId)
         .is("deleted_at", null)
         .or(
-          `first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,tag.ilike.%${searchTerm}%`
+          `first_name.ilike.%${safeSearch}%,last_name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%,phone.ilike.%${safeSearch}%,tag.ilike.%${safeSearch}%`
         )
         .limit(20)
         .order("created_at", { ascending: false });
@@ -65,7 +71,7 @@ export class SearchService {
         .eq("workspace_id", workspaceId)
         .is("deleted_at", null)
         .not("notes", "is", null)
-        .ilike("notes", `%${searchTerm}%`)
+        .ilike("notes", `%${safeSearch}%`)
         .limit(10)
         .order("created_at", { ascending: false });
 
@@ -93,7 +99,7 @@ export class SearchService {
         .select("id, staff_name, start_time, status, notes, client_id")
         .eq("workspace_id", workspaceId)
         .or(
-          `staff_name.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%`
+          `staff_name.ilike.%${safeSearch}%,status.ilike.%${safeSearch}%`
         )
         .limit(20)
         .order("start_time", { ascending: false });
@@ -122,7 +128,7 @@ export class SearchService {
         .select("id, staff_name, start_time, notes, client_id")
         .eq("workspace_id", workspaceId)
         .not("notes", "is", null)
-        .ilike("notes", `%${searchTerm}%`)
+        .ilike("notes", `%${safeSearch}%`)
         .limit(10)
         .order("start_time", { ascending: false });
 
@@ -150,7 +156,7 @@ export class SearchService {
         .select("*")
         .eq("workspace_id", workspaceId)
         .or(
-          `title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,type.ilike.%${searchTerm}%`
+          `title.ilike.%${safeSearch}%,description.ilike.%${safeSearch}%,type.ilike.%${safeSearch}%`
         )
         .limit(20)
         .order("created_at", { ascending: false });
@@ -179,7 +185,7 @@ export class SearchService {
         .select("*")
         .eq("workspace_id", workspaceId)
         .or(
-          `name.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,mime_type.ilike.%${searchTerm}%`
+          `name.ilike.%${safeSearch}%,category.ilike.%${safeSearch}%,mime_type.ilike.%${safeSearch}%`
         )
         .limit(20)
         .order("created_at", { ascending: false });

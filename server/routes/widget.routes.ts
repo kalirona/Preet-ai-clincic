@@ -10,6 +10,7 @@ const router = Router();
 // GET /widget/:agentId - Get agent config for widget rendering
 router.get(
   "/widget/:agentId",
+  publicRateLimiter,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const agent = await AgentService.getAgentByWidgetId(req.params.agentId);
@@ -84,6 +85,7 @@ router.post(
 // GET /widget/conversation/:conversationId/messages - Poll messages
 router.get(
   "/widget/conversation/:conversationId/messages",
+  publicRateLimiter,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { after } = req.query;
@@ -103,19 +105,35 @@ router.get(
 );
 
 // GET /widget/conversation/:conversationId - Get conversation status
+// Must be scoped to the agent's workspace to prevent IDOR
 router.get(
   "/widget/conversation/:conversationId",
+  publicRateLimiter,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const supabase = getSupabaseServerClient();
       const { data: conv, error } = await supabase
         .from("conversations")
-        .select("id, status, visitor_name, visitor_email")
+        .select("id, status, visitor_name, visitor_email, workspace_id")
         .eq("id", req.params.conversationId)
         .single();
 
       if (error || !conv) throw new ApiError(404, "Conversation not found.");
-      res.json(conv);
+
+      // Verify the conversation belongs to an active agent (workspace scoping)
+      const { data: agent } = await supabase
+        .from("ai_agents")
+        .select("id")
+        .eq("workspace_id", conv.workspace_id)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+
+      if (!agent) throw new ApiError(404, "Conversation not found.");
+
+      // Strip workspace_id from response
+      const { workspace_id, ...safeConv } = conv;
+      res.json(safeConv);
     } catch (err) {
       next(err);
     }

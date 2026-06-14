@@ -210,7 +210,11 @@ publicBookingRouter.post("/book", publicRateLimiter, async (req: Request, res: R
         });
       }
     } catch (dbErr) {
-      console.warn("[PublicBooking] Supabase writing failed, completing booking with sandbox logging:", dbErr);
+      console.warn("[PublicBooking] Supabase writing failed:", dbErr);
+      return res.status(500).json({
+        error: "Booking could not be saved. Please try again or contact us directly.",
+        success: false
+      });
     }
 
     res.json({

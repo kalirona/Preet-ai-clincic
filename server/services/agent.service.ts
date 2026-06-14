@@ -1,11 +1,13 @@
 import { getSupabaseServerClient } from "../middleware/requireAuth";
 import { AIAgent, AgentKnowledgeFile } from "../types/agent";
 
-const supabase = getSupabaseServerClient();
-
 export class AgentService {
+  // Use lazy getter instead of module-level singleton
+  private static getClient() {
+    return getSupabaseServerClient();
+  }
   static async getAll(workspaceId: string): Promise<AIAgent[]> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("ai_agents")
       .select("*")
       .eq("workspace_id", workspaceId)
@@ -16,7 +18,7 @@ export class AgentService {
   }
 
   static async getById(id: string, workspaceId: string): Promise<AIAgent | null> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("ai_agents")
       .select("*")
       .eq("id", id)
@@ -28,7 +30,7 @@ export class AgentService {
   }
 
   static async create(workspaceId: string, payload: Partial<AIAgent>): Promise<AIAgent> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("ai_agents")
       .insert({
         workspace_id: workspaceId,
@@ -64,7 +66,7 @@ export class AgentService {
     if (payload.widgetConfig !== undefined) updates.widget_config = payload.widgetConfig;
     updates.updated_at = new Date().toISOString();
 
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("ai_agents")
       .update(updates)
       .eq("id", id)
@@ -77,7 +79,7 @@ export class AgentService {
   }
 
   static async delete(id: string, workspaceId: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await this.getClient()
       .from("ai_agents")
       .delete()
       .eq("id", id)
@@ -87,7 +89,7 @@ export class AgentService {
   }
 
   static async getAgentByWidgetId(agentId: string): Promise<(AIAgent & { workspaceId: string }) | null> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("ai_agents")
       .select("*")
       .eq("id", agentId)
@@ -100,7 +102,7 @@ export class AgentService {
 
   // Knowledge Files
   static async getKnowledgeFiles(agentId: string, workspaceId: string): Promise<AgentKnowledgeFile[]> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("agent_knowledge_files")
       .select("*")
       .eq("agent_id", agentId)
@@ -112,7 +114,7 @@ export class AgentService {
   }
 
   static async addKnowledgeFile(agentId: string, workspaceId: string, file: Omit<AgentKnowledgeFile, 'id' | 'createdAt'>): Promise<AgentKnowledgeFile> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getClient()
       .from("agent_knowledge_files")
       .insert({
         agent_id: agentId,
@@ -132,7 +134,7 @@ export class AgentService {
   }
 
   static async deleteKnowledgeFile(id: string, workspaceId: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await this.getClient()
       .from("agent_knowledge_files")
       .delete()
       .eq("id", id)

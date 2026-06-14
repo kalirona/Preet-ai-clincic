@@ -16,6 +16,7 @@ router.get(
   "/",
   clientRateLimiter,
   requireAuth as any,
+  requireRole(["Owner", "Admin", "Member"]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const workspaceId = await getWorkspaceId(req);
