@@ -114,7 +114,7 @@ export function SecuritySettings() {
             <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold text-slate-900">Production Key</div>
               <div className="text-xs text-slate-500 font-mono">
-                {showApiKey ? 'sk_live_4eC39HqLyjWDarjtT1zdp7dc' : '••••••••••••••••••••••••••••••••'}
+                {showApiKey ? '••••••••••••••••••••••••••••••••' : '••••••••••••••••••••••••••••••••'}
               </div>
             </div>
             <button onClick={() => setShowApiKey(!showApiKey)} className="text-slate-400 hover:text-slate-600">
