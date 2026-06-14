@@ -1,5 +1,6 @@
 import { Response, NextFunction } from "express";
 import { createClient } from "@supabase/supabase-js";
+import ws from "ws";
 import { AuthenticatedRequest } from "../types/auth";
 import { ApiError } from "../types/errors";
 
@@ -23,6 +24,9 @@ export const getSupabaseServerClient = (accessToken?: string) => {
         persistSession: false,
         autoRefreshToken: false,
       },
+      realtime: {
+        transport: ws as any,
+      },
     });
   }
   
@@ -31,6 +35,9 @@ export const getSupabaseServerClient = (accessToken?: string) => {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
+    },
+    realtime: {
+      transport: ws as any,
     },
   });
 };
