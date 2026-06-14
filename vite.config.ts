@@ -36,8 +36,7 @@ export default defineConfig(({mode}) => {
         },
         external: [
           'openai', 'stripe', 'zod', '@google/genai', 'express',
-          'express-rate-limit', 'multer', 'nodemailer',
-          '@supabase/supabase-js', 'dotenv'
+          'express-rate-limit', 'multer', 'nodemailer', 'dotenv'
         ],
       },
     },
